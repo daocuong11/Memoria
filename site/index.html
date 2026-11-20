@@ -1,32 +1,504 @@
 <!doctype html>
-<!-- Placeholder. Replace with the real landing page (see site/README.md). -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Memoria — local-first memory for AI coding tools</title>
-  <meta name="description" content="One local memory shared by every AI coding tool. Capture Claude Code, Codex, Gemini CLI, Copilot and Cursor sessions; recall anywhere over MCP.">
-  <meta property="og:image" content="./shared/social-preview.png">
-  <link rel="icon" href="./shared/logo.png">
-  <style>
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0a0c10; color: #e9ecf3;
-           font: 16px/1.5 Inter, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; text-align: center; }
-    main { padding: 2rem; max-width: 40rem; }
-    img { width: 96px; height: 96px; border-radius: 24px; }
-    h1 { font-size: 2.5rem; margin: 1rem 0 .25rem; }
-    p { color: #8d95a6; }
-    code { display: inline-block; background: #12151b; border: 1px solid #242935; border-radius: 8px; padding: .5rem .75rem;
-           font-family: "JetBrains Mono", Menlo, Consolas, monospace; color: #e9ecf3; }
-    a { color: #6e8dff; }
-  </style>
+  <title>Memoria: local-first memory for AI coding tools</title>
+  <meta name="description" content="One local memory shared by every AI coding tool. Capture Claude Code, Codex, Gemini CLI, Copilot and Cursor sessions; recall anywhere over MCP. Nothing leaves your computer.">
+  <meta name="theme-color" content="#0a0c10">
+  <link rel="canonical" href="https://xinzzu.github.io/Memoria/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Memoria: your AI tools forget. Memoria doesn't.">
+  <meta property="og:description" content="One local memory shared by every AI coding tool. Switch tools or hit a usage limit without explaining everything again.">
+  <meta property="og:url" content="https://xinzzu.github.io/Memoria/">
+  <meta property="og:image" content="https://xinzzu.github.io/Memoria/shared/social-preview.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" sizes="128x128" href="./favicon.png">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+  <script>document.documentElement.className = "js";</script>
+  <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <main>
-    <img src="./shared/logo.png" alt="Memoria logo">
-    <h1>Memoria</h1>
-    <p>Your AI tools forget. Memoria doesn't. One local memory for every AI coding tool.</p>
-    <p><code>npx @xinzzu/memoria@latest server</code></p>
-    <p><a href="https://github.com/xinzzu/Memoria">GitHub</a> · <a href="https://github.com/xinzzu/Memoria/releases/latest">Download</a></p>
+  <a class="skip" href="#main">Skip to content</a>
+  <div class="progress" aria-hidden="true"></div>
+
+  <header class="nav">
+    <div class="wrap">
+      <a class="brand" href="#top" aria-label="Memoria home"><img class="brand-mark" src="./favicon.png" width="28" height="28" alt="">Memoria</a>
+      <nav aria-label="Primary">
+        <ul>
+          <li><a class="link" href="#how">How it works</a></li>
+          <li><a class="link" href="#tools">Tools</a></li>
+          <li><a class="link" href="#privacy">Privacy</a></li>
+          <li><a class="link" href="#install">Install</a></li>
+          <li><a class="btn" href="https://github.com/xinzzu/Memoria">GitHub</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- Hero -->
+    <div class="hero" id="top">
+      <div class="orbs" aria-hidden="true"><span></span><span></span></div>
+      <svg class="net" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+        <g class="lines">
+          <path d="M80 110 L230 210 L110 330 L250 450 L60 520"/>
+          <path d="M230 210 L250 450"/>
+          <path d="M1120 100 L970 190 L1090 320 L950 430 L1140 510"/>
+          <path d="M970 190 L950 430"/>
+        </g>
+        <g class="sigs">
+          <path pathLength="100" d="M80 110 L230 210 L110 330 L250 450 L60 520"/>
+          <path pathLength="100" d="M1120 100 L970 190 L1090 320 L950 430 L1140 510"/>
+        </g>
+        <g class="dots">
+          <circle cx="80" cy="110" r="5" style="--d:0"/>
+          <circle cx="230" cy="210" r="6" style="--d:1"/>
+          <circle cx="110" cy="330" r="5" style="--d:2"/>
+          <circle cx="250" cy="450" r="6" style="--d:3"/>
+          <circle cx="60" cy="520" r="4" style="--d:4"/>
+          <circle cx="1120" cy="100" r="5" style="--d:5"/>
+          <circle cx="970" cy="190" r="6" style="--d:6"/>
+          <circle cx="1090" cy="320" r="5" style="--d:7"/>
+          <circle cx="950" cy="430" r="6" style="--d:8"/>
+          <circle cx="1140" cy="510" r="4" style="--d:9"/>
+        </g>
+      </svg>
+      <div class="wrap">
+        <span class="eyebrow">100% local &middot; MIT licensed</span>
+        <h1>Your AI tools forget. <span class="grad">Memoria doesn't.</span></h1>
+        <p class="lede">One local memory shared by every AI coding tool. Hit a usage limit in one, open another, and it already knows what you were working on.</p>
+
+        <div class="install">
+          <code><span class="prompt">$ </span><span id="cmd">npx @xinzzu/memoria@latest server</span></code>
+          <button class="btn btn-primary copy" type="button" data-copy="#cmd" aria-label="Copy install command">Copy</button>
+        </div>
+        <div class="cta-row">
+          <a class="btn" href="https://github.com/xinzzu/Memoria/releases/latest">Download desktop app</a>
+          <a class="btn" href="https://github.com/xinzzu/Memoria">Star on GitHub</a>
+        </div>
+        <p class="note">Then open http://127.0.0.1:48210. Node.js 22.5 or newer for the CLI.</p>
+
+        <div class="demo">
+          <img src="./shared/demo.gif" width="800" height="450" decoding="async" fetchpriority="low" alt="Memoria demo: a session captured in Claude Code becomes memories, and Codex recalls them over MCP.">
+        </div>
+      </div>
+    </div>
+
+    <!-- Facts -->
+    <div class="stats">
+      <div class="wrap">
+        <ul>
+          <li><strong data-count="9">9</strong><span>tools captured</span></li>
+          <li><strong data-count="12">12</strong><span>MCP clients, one-click setup</span></li>
+          <li><strong>92.8&ndash;100%</strong><span>hit@5 retrieval, zero LLM calls</span></li>
+          <li><strong>0</strong><span>accounts or cloud services required</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Problem -->
+    <section id="problem">
+      <div class="deco deco-r hop" aria-hidden="true">
+        <svg viewBox="0 0 220 300" width="220" height="300" focusable="false">
+          <path class="trail" d="M40 30 L150 110 L40 190 L150 270"/>
+          <circle class="n" cx="40" cy="30" r="8" style="--n:0"/>
+          <circle class="n" cx="150" cy="110" r="8" style="--n:1"/>
+          <circle class="n" cx="40" cy="190" r="8" style="--n:2"/>
+          <circle class="n" cx="150" cy="270" r="8" style="--n:3"/>
+          <circle class="hopper" cx="0" cy="0" r="6"/>
+        </svg>
+      </div>
+      <div class="wrap">
+        <div class="sec-head">
+          <p class="kicker">The problem</p>
+          <h2>Every switch starts with a re-explain.</h2>
+          <p>Claude doesn't remember yesterday's session. Codex doesn't know the decision you made in Gemini CLI. When you hit a limit mid-task, you spend the next ten minutes rebuilding context.</p>
+        </div>
+        <div class="problem">
+          <div class="card bad">
+            <span class="tag">Without Memoria</span>
+            <h3>14:30, limit reached</h3>
+            <p>You open another tool at 14:31 and paste in the same background, the same decisions and the same half-finished plan.</p>
+          </div>
+          <div class="card good">
+            <span class="tag">With Memoria</span>
+            <h3>14:31, already caught up</h3>
+            <p>The new tool opens with your open tasks, locked decisions, current branch and dirty files. You keep going.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section id="how" class="alt">
+      <div class="deco deco-edge-r layers" aria-hidden="true">
+        <svg viewBox="0 0 200 250" width="200" height="250" focusable="false">
+          <path class="lay l3" style="--k:2" d="M100 150 L172 190 L100 230 L28 190 Z"/>
+          <path class="lay l2" style="--k:1" d="M100 85 L172 125 L100 165 L28 125 Z"/>
+          <path class="lay l1" style="--k:0" d="M100 20 L172 60 L100 100 L28 60 Z"/>
+        </svg>
+      </div>
+      <div class="wrap">
+        <div class="sec-head">
+          <p class="kicker">How it works</p>
+          <h2>Capture, extract, recall.</h2>
+          <p>Memoria runs in your tray and watches the session files your tools already write. There is nothing to wire up per project.</p>
+        </div>
+        <ol class="steps">
+          <li>
+            <h3>Capture</h3>
+            <p>Sessions from nine AI coding tools are read as they happen. When a tool reports a usage limit, Memoria snapshots your files, commands and git state right away.</p>
+          </li>
+          <li>
+            <h3>Extract</h3>
+            <p>Transcripts become memories: facts, decisions, tasks and fixed errors. This works with no model at all, and gets sharper if you add Ollama.</p>
+          </li>
+          <li>
+            <h3>Recall</h3>
+            <p>Any MCP client can recall and curate memories. A resume block is also written into AGENTS.md, CLAUDE.md and GEMINI.md for tools that read files.</p>
+          </li>
+        </ol>
+
+        <div class="resume">
+          <div>
+            <h3>A resume block that stays current</h3>
+            <p>About four minutes after a session goes quiet, or immediately on a usage limit, Memoria writes an idempotent block into your project's context files.</p>
+            <p>Newer decisions replace older ones about the same subject, so the block does not fill up with stale choices.</p>
+          </div>
+<pre class="codeblock" aria-label="Example SESSION RESUME block"><span class="ln h">## SESSION RESUME</span><span class="ln m">&gt; claude &middot; 14:32 &middot; branch: feat/auth</span><span class="ln"></span><span class="ln h">Open tasks:</span><span class="ln">- [ ] finish the refresh-token endpoint in routes/api.ts</span><span class="ln"></span><span class="ln h">Locked decisions (do not repeat):</span><span class="ln">- <span class="g">JWT access tokens, 15 min, not sessions</span></span><span class="ln"></span><span class="ln"><span class="h">Dirty files (git):</span> <span class="a">src/auth/middleware.ts, src/auth/routes.ts</span></span><span class="ln"></span><span class="ln m">_Continue the work above. Do not re-litigate locked decisions._</span></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tools -->
+    <section id="tools">
+      <div class="deco deco-r orbit" aria-hidden="true">
+        <svg viewBox="0 0 260 260" width="260" height="260" focusable="false">
+          <circle class="ring" cx="130" cy="130" r="48"/>
+          <circle class="ring" cx="130" cy="130" r="88"/>
+          <circle class="ring dash" cx="130" cy="130" r="124"/>
+          <g class="o1"><circle class="body" cx="178" cy="130" r="6"/><circle class="body" cx="82" cy="130" r="4"/></g>
+          <g class="o2"><circle class="body" cx="130" cy="42" r="6"/><circle class="body" cx="206" cy="174" r="5"/><circle class="body" cx="54" cy="174" r="4"/></g>
+          <g class="o3"><circle class="body" cx="254" cy="130" r="5"/><circle class="body" cx="68" cy="238" r="4"/></g>
+          <circle class="core" cx="130" cy="130" r="8"/>
+        </svg>
+      </div>
+      <div class="wrap">
+        <div class="sec-head">
+          <p class="kicker">Supported tools</p>
+          <h2>Works with the tools you already use.</h2>
+        </div>
+        <div class="tools">
+          <div class="card">
+            <div class="big">9</div>
+            <p class="sub">tools captured automatically</p>
+            <ul class="chips">
+              <li>Claude Code</li>
+              <li>Codex</li>
+              <li>Gemini CLI</li>
+              <li>opencode</li>
+              <li>Copilot</li>
+              <li>Antigravity</li>
+              <li>VS Code</li>
+              <li>Cursor</li>
+              <li>Windsurf</li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="big">12</div>
+            <p class="sub">MCP clients with one-click registration</p>
+            <ul class="chips">
+              <li>Claude Code</li>
+              <li>Claude Desktop</li>
+              <li>Codex CLI</li>
+              <li>Gemini CLI</li>
+              <li>opencode</li>
+              <li>Copilot CLI</li>
+              <li>Antigravity</li>
+              <li>Cursor</li>
+              <li>Windsurf</li>
+              <li>VS Code</li>
+              <li>Cline</li>
+              <li>Zed</li>
+            </ul>
+          </div>
+        </div>
+        <p class="small">Anything else that speaks MCP can connect to <code>http://127.0.0.1:48210/mcp</code>. Registrations merge into your existing configs and never overwrite them.</p>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features" class="alt">
+      <div class="deco deco-fill" aria-hidden="true">
+        <span style="--x:3%;--s:15s;--d:-2s"></span>
+        <span class="sq" style="--x:7%;--w:8px;--s:19s;--d:-9s;--c:var(--green);--dx:-18px"></span>
+        <span style="--x:11%;--w:4px;--s:12s;--d:-5s;--c:var(--accent-2);--dx:30px"></span>
+        <span class="sq" style="--x:15%;--w:5px;--s:17s;--d:-12s;--dx:16px"></span>
+        <span style="--x:85%;--w:5px;--s:14s;--d:-7s;--c:var(--green);--dx:-26px"></span>
+        <span class="sq" style="--x:89%;--w:7px;--s:20s;--d:-3s;--c:var(--accent-2)"></span>
+        <span style="--x:93%;--s:13s;--d:-10s;--dx:20px"></span>
+        <span style="--x:97%;--w:4px;--s:16s;--d:-6s;--c:var(--green);--dx:-14px"></span>
+        <span style="--x:35%;--w:4px;--s:22s;--d:-14s;--dx:-30px"></span>
+        <span class="sq" style="--x:66%;--w:5px;--s:21s;--d:-1s;--c:var(--accent-2);--dx:28px"></span>
+      </div>
+      <div class="wrap">
+        <div class="sec-head">
+          <p class="kicker">What you get</p>
+          <h2>Memory your agents can read and curate.</h2>
+        </div>
+        <div class="features">
+          <div class="card">
+            <h3>Nine MCP tools</h3>
+            <p>recall, remember, update_memory, forget, related, project_context, get_memory, file_context and build_context. Agents edit the brain, not only read it.</p>
+          </div>
+          <div class="card">
+            <h3>Hybrid retrieval</h3>
+            <p>FTS5 keyword search, embeddings and graph centrality, tolerant of typos. hit@5 of 92.8&ndash;100% on a reproducible benchmark, with no LLM calls.</p>
+          </div>
+          <div class="card">
+            <h3>Pre-limit snapshots</h3>
+            <p>The moment a tool reports a usage limit, work state is saved and injected, before you are locked out.</p>
+          </div>
+          <div class="card">
+            <h3>Tasks and timeline</h3>
+            <p>Every task your AI sessions promised, on one checkable board, next to per-project activity and git history.</p>
+          </div>
+          <div class="card">
+            <h3>Memory graph</h3>
+            <p>See how decisions, fixes and files connect in a 3D force graph with 2D fallbacks.</p>
+          </div>
+          <div class="card">
+            <h3>Team project brain</h3>
+            <p>Opt in to a <code>.memoria/brain.md</code> file in the repo, so decisions and conventions travel through git and show up in PRs.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Screenshots -->
+    <section id="screens">
+      <div class="deco deco-edge-l radar" aria-hidden="true">
+        <svg viewBox="0 0 260 260" width="260" height="260" focusable="false">
+          <line class="cross" x1="130" y1="0" x2="130" y2="260"/>
+          <line class="cross" x1="0" y1="130" x2="260" y2="130"/>
+          <circle class="rg" style="--k:0" cx="130" cy="130" r="120"/>
+          <circle class="rg" style="--k:1" cx="130" cy="130" r="120"/>
+          <circle class="rg" style="--k:2" cx="130" cy="130" r="120"/>
+          <circle class="blip" style="--b:0.6s" cx="190" cy="80" r="4"/>
+          <circle class="blip" style="--b:2.1s" cx="82" cy="176" r="4"/>
+          <circle class="blip" style="--b:3.4s" cx="198" cy="190" r="3"/>
+          <circle class="hub" cx="130" cy="130" r="5"/>
+        </svg>
+      </div>
+      <div class="wrap">
+        <div class="sec-head">
+          <p class="kicker">The dashboard</p>
+          <h2>Everything Memoria knows, in one place.</h2>
+        </div>
+        <div class="shots">
+          <figure class="wide">
+            <img src="./shared/overview.png" width="1500" height="913" loading="lazy" decoding="async" alt="Memoria overview: activity chart, recent projects and setup checklist.">
+            <figcaption>Overview: activity, recent projects and resume-ready projects.</figcaption>
+          </figure>
+          <figure>
+            <img src="./shared/memori.png" width="1500" height="913" loading="lazy" decoding="async" alt="Memoria memory library with search and filters.">
+            <figcaption>Memories: search, filter and curate.</figcaption>
+          </figure>
+          <figure>
+            <img src="./shared/handoff.png" width="1500" height="913" loading="lazy" decoding="async" alt="Memoria handoff view with a generated resume block.">
+            <figcaption>Handoff: copy or inject the resume block.</figcaption>
+          </figure>
+          <figure class="wide">
+            <img src="./shared/graph.png" width="1500" height="913" loading="lazy" decoding="async" alt="Memoria memory graph showing connected memories.">
+            <figcaption>Graph: how your memories connect.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- Privacy -->
+    <section id="privacy" class="alt">
+      <div class="deco deco-r hex" aria-hidden="true">
+        <svg viewBox="0 0 240 260" width="240" height="260" focusable="false">
+          <polygon class="hx" style="--k:0" points="120,30 197.9,75 197.9,165 120,210 42.1,165 42.1,75"/>
+          <polygon class="hx" style="--k:1" points="120,30 197.9,75 197.9,165 120,210 42.1,165 42.1,75"/>
+          <polygon class="hx" style="--k:2" points="120,30 197.9,75 197.9,165 120,210 42.1,165 42.1,75"/>
+          <polygon class="core" points="120,98 139,109 139,131 120,142 101,131 101,109"/>
+          <g class="sat"><circle cx="120" cy="60" r="4"/></g>
+        </svg>
+      </div>
+      <div class="wrap">
+        <div class="sec-head">
+          <p class="kicker">Privacy</p>
+          <h2>Your sessions stay on your machine.</h2>
+          <p>No account, no cloud service and no telemetry. Everything lives in a local SQLite database.</p>
+        </div>
+        <div class="priv">
+          <div class="card">
+            <h3>Local by default</h3>
+            <ul>
+              <li>Capture, extraction and search run on your computer, in <code>~/.memoria</code>.</li>
+              <li>Works with no model at all. Ollama is an optional upgrade.</li>
+              <li>Nothing leaves your machine unless you opt in: an OpenAI-compatible endpoint, webhook notifications, or encrypted sync.</li>
+              <li>API keys, tokens, private keys and passwords are redacted before anything is stored.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Optional encrypted sync</h3>
+            <ul>
+              <li>Move your library between your own devices with end-to-end encrypted <code>.memsync</code> bundles (AES-256-GCM).</li>
+              <li>Use a manual export or a shared folder such as Dropbox, iCloud or Syncthing. No server involved.</li>
+            </ul>
+            <p class="never"><strong>Never synced:</strong> embeddings, secrets, settings, raw transcripts and machine-local paths.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Install -->
+    <section id="install">
+      <div class="deco deco-r" aria-hidden="true">
+        <div class="bars">
+          <span style="--k:0;--h:.55;--t:2.4s"></span>
+          <span style="--k:1;--h:.9;--t:3.1s"></span>
+          <span style="--k:2;--h:.7;--t:2.7s"></span>
+          <span style="--k:3;--h:1;--t:3.4s"></span>
+          <span style="--k:4;--h:.45;--t:2.2s"></span>
+          <span style="--k:5;--h:.8;--t:2.9s"></span>
+          <span style="--k:6;--h:.62;--t:3.6s"></span>
+          <span style="--k:7;--h:.95;--t:2.5s"></span>
+          <span style="--k:8;--h:.5;--t:3.2s"></span>
+          <span style="--k:9;--h:.75;--t:2.8s"></span>
+          <span style="--k:10;--h:.88;--t:3.3s"></span>
+          <span style="--k:11;--h:.4;--t:2.3s"></span>
+        </div>
+      </div>
+      <div class="wrap">
+        <div class="sec-head">
+          <p class="kicker">Install</p>
+          <h2>Running in a minute.</h2>
+          <p>Get the desktop app, or run the headless server with one command. On first launch a setup assistant finds your tools and imports past sessions.</p>
+        </div>
+        <div class="dl">
+          <a href="https://github.com/xinzzu/Memoria/releases/latest"><strong>Windows</strong><span>10 or 11, .exe installer</span></a>
+          <a href="https://github.com/xinzzu/Memoria/releases/latest"><strong>macOS</strong><span>Apple Silicon and Intel, .dmg</span></a>
+          <a href="https://github.com/xinzzu/Memoria/releases/latest"><strong>Linux</strong><span>AppImage or .deb</span></a>
+          <a href="https://github.com/xinzzu/Memoria/releases/latest"><strong>All releases</strong><span>GitHub Releases</span></a>
+        </div>
+        <p class="small">macOS and Windows builds are not signed or notarized yet. On macOS, drag to Applications, then right-click and choose Open the first time.</p>
+
+        <div class="headless">
+          <h3>Headless or CLI</h3>
+          <p class="small">For servers, WSL and devcontainers. Needs Node.js 22.5 or newer.</p>
+          <div class="install">
+            <code><span class="prompt">$ </span><span id="cmd2">npx @xinzzu/memoria@latest server</span></code>
+            <button class="btn copy" type="button" data-copy="#cmd2" aria-label="Copy install command">Copy</button>
+          </div>
+          <p class="small">Dashboard, API and MCP all run on http://127.0.0.1:48210. Prefer a global install? <code>npm install -g @xinzzu/memoria</code>, then <code>memoria server</code>.</p>
+        </div>
+      </div>
+    </section>
   </main>
+
+  <footer>
+    <div class="wrap">
+      <ul>
+        <li><a href="https://github.com/xinzzu/Memoria">GitHub</a></li>
+        <li><a href="https://www.npmjs.com/package/@xinzzu/memoria">npm</a></li>
+        <li><a href="https://github.com/xinzzu/Memoria/releases">Releases</a></li>
+        <li><a href="https://github.com/xinzzu/Memoria/blob/main/CHANGELOG.md">Changelog</a></li>
+        <li><a href="https://github.com/xinzzu/Memoria/blob/main/LICENSE">MIT license</a></li>
+      </ul>
+      <a href="https://hub.xerj.org/contributors/xinzzu"><img src="https://hub.xerj.org/contributors/xinzzu/badge.svg" alt="XERJ Corpus Hub contributor" loading="lazy" height="20"></a>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      var doc = document, root = doc.documentElement;
+      var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      // Copy buttons. Without JavaScript the command is still selectable text.
+      [].forEach.call(doc.querySelectorAll(".copy"), function (btn) {
+        btn.addEventListener("click", function () {
+          var el = doc.querySelector(btn.getAttribute("data-copy"));
+          if (!el || !navigator.clipboard) return;
+          navigator.clipboard.writeText(el.textContent.trim()).then(function () {
+            btn.textContent = "Copied";
+            btn.setAttribute("data-state", "done");
+            setTimeout(function () {
+              btn.textContent = "Copy";
+              btn.removeAttribute("data-state");
+            }, 1800);
+          });
+        });
+      });
+
+      // Stagger index (--i) = position among matching siblings.
+      var REVEAL = ".sec-head,.card,.steps li,.resume > *,.shots figure,.dl a,.headless,.stats li";
+      var els = [].slice.call(doc.querySelectorAll(REVEAL));
+      els.forEach(function (el) {
+        var i = 0, p = el.previousElementSibling;
+        while (p) { if (p.matches(REVEAL)) i++; p = p.previousElementSibling; }
+        el.style.setProperty("--i", Math.min(i, 5));
+      });
+      [].forEach.call(doc.querySelectorAll(".chips li, .codeblock .ln"), function (el) {
+        var i = 0, p = el.previousElementSibling;
+        while (p) { i++; p = p.previousElementSibling; }
+        el.style.setProperty("--i", i);
+      });
+
+      // Number count-up for the stats strip.
+      function count(el) {
+        var to = +el.getAttribute("data-count"), t0 = performance.now(), dur = 1100;
+        (function step(t) {
+          var k = Math.min((t - t0) / dur, 1);
+          el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3)));
+          if (k < 1) requestAnimationFrame(step);
+        })(t0);
+      }
+
+      // Reveal on scroll, once per element.
+      function show(el) {
+        el.classList.add("in");
+        var c = el.querySelector("[data-count]");
+        if (c) count(c);
+        setTimeout(function () { el.classList.add("done"); }, 1400);
+      }
+      if (reduce || !("IntersectionObserver" in window)) {
+        els.forEach(function (el) { el.classList.add("in", "done"); });
+      } else {
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) {
+            if (e.isIntersecting) { show(e.target); io.unobserve(e.target); }
+          });
+        }, { rootMargin: "0px 0px -8% 0px", threshold: 0.12 });
+        els.forEach(function (el) { io.observe(el); });
+
+        // Pause the looping decorations of the hero and each section while off-screen.
+        var vis = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) { e.target.classList.toggle("off", !e.isIntersecting); });
+        });
+        [].forEach.call(doc.querySelectorAll(".hero, section"), function (s) { vis.observe(s); });
+      }
+
+      // Scroll progress bar and nav shadow: one passive listener, one rAF per frame.
+      var nav = doc.querySelector(".nav"), bar = doc.querySelector(".progress"), tick = false;
+      function onScroll() {
+        if (tick) return;
+        tick = true;
+        requestAnimationFrame(function () {
+          var max = root.scrollHeight - window.innerHeight, y = window.pageYOffset;
+          nav.classList.toggle("scrolled", y > 8);
+          if (!reduce && max > 0) bar.style.transform = "scaleX(" + Math.min(y / max, 1) + ")";
+          tick = false;
+        });
+      }
+      window.addEventListener("scroll", onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
 </body>
 </html>
