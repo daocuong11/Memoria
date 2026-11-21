@@ -26,6 +26,7 @@ Tanpa cloud. Tanpa akun. Tidak ada data yang keluar dari komputer Anda.
 [![npm](https://img.shields.io/npm/v/@xinzzu/memoria?label=npm)](https://www.npmjs.com/package/@xinzzu/memoria)
 [![MCP Registry](https://img.shields.io/badge/MCP%20Registry-io.github.xinzzu%2Fmemoria-6e8dff)](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.xinzzu/memoria)
 [![xinzzu/Memoria MCP server](https://glama.ai/mcp/servers/xinzzu/Memoria/badges/score.svg)](https://glama.ai/mcp/servers/xinzzu/Memoria)
+[![Memoria MCP on mcprush](https://mcprush.com/badge/xinzzu-memoria-mcp/compact.svg)](https://mcprush.com/xinzzu/memoria-mcp)
 
 [English](README.md) · **Bahasa Indonesia** · [हिन्दी](README.hi.md)
 
@@ -212,7 +213,7 @@ config yang sudah ada — tidak ada yang ditimpa.
 { "mcpServers": { "memoria": { "command": "npx", "args": ["-y", "@xinzzu/memoria", "mcp"] } } }
 ```
 
-Memoria terdaftar di [MCP Registry resmi](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.xinzzu/memoria) sebagai `io.github.xinzzu/memoria` dan di [Glama](https://glama.ai/mcp/servers/xinzzu/Memoria).
+Memoria terdaftar di [MCP Registry resmi](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.xinzzu/memoria) sebagai `io.github.xinzzu/memoria`, di [Glama](https://glama.ai/mcp/servers/xinzzu/Memoria) dan di [mcprush](https://mcprush.com/xinzzu/memoria-mcp).
 
 Mau tanpa edit config? Semua klien MCP-capable bisa langsung menunjuk HTTP bridge:
 

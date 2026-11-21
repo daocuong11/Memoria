@@ -26,6 +26,7 @@ No cloud. No account. Nothing leaves your computer.
 [![npm](https://img.shields.io/npm/v/@xinzzu/memoria?label=npm)](https://www.npmjs.com/package/@xinzzu/memoria)
 [![MCP Registry](https://img.shields.io/badge/MCP%20Registry-io.github.xinzzu%2Fmemoria-6e8dff)](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.xinzzu/memoria)
 [![xinzzu/Memoria MCP server](https://glama.ai/mcp/servers/xinzzu/Memoria/badges/score.svg)](https://glama.ai/mcp/servers/xinzzu/Memoria)
+[![Memoria MCP on mcprush](https://mcprush.com/badge/xinzzu-memoria-mcp/compact.svg)](https://mcprush.com/xinzzu/memoria-mcp)
 
 **English** · [Bahasa Indonesia](README.id.md) · [हिन्दी](README.hi.md)
 
@@ -217,7 +218,7 @@ configs — nothing is overwritten.
 { "mcpServers": { "memoria": { "command": "npx", "args": ["-y", "@xinzzu/memoria", "mcp"] } } }
 ```
 
-Memoria is listed on the [official MCP Registry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.xinzzu/memoria) as `io.github.xinzzu/memoria` and on [Glama](https://glama.ai/mcp/servers/xinzzu/Memoria).
+Memoria is listed on the [official MCP Registry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.xinzzu/memoria) as `io.github.xinzzu/memoria`, on [Glama](https://glama.ai/mcp/servers/xinzzu/Memoria) and on [mcprush](https://mcprush.com/xinzzu/memoria-mcp).
 
 Prefer zero config? Any MCP-capable tool can also point straight at the HTTP bridge:
 

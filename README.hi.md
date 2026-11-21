@@ -26,6 +26,7 @@ Claude Code, Codex, Gemini CLI, Copilot, Antigravity, opencode, VS Code, Cursor,
 [![npm](https://img.shields.io/npm/v/@xinzzu/memoria?label=npm)](https://www.npmjs.com/package/@xinzzu/memoria)
 [![MCP Registry](https://img.shields.io/badge/MCP%20Registry-io.github.xinzzu%2Fmemoria-6e8dff)](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.xinzzu/memoria)
 [![xinzzu/Memoria MCP server](https://glama.ai/mcp/servers/xinzzu/Memoria/badges/score.svg)](https://glama.ai/mcp/servers/xinzzu/Memoria)
+[![Memoria MCP on mcprush](https://mcprush.com/badge/xinzzu-memoria-mcp/compact.svg)](https://mcprush.com/xinzzu/memoria-mcp)
 
 [English](README.md) · [Bahasa Indonesia](README.id.md) · **हिन्दी**
 
@@ -216,7 +217,7 @@ HTTP ब्रिज के ज़रिए), **Windsurf** (`~/.codeium/windsurf
 { "mcpServers": { "memoria": { "command": "npx", "args": ["-y", "@xinzzu/memoria", "mcp"] } } }
 ```
 
-Memoria [आधिकारिक MCP Registry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.xinzzu/memoria) पर `io.github.xinzzu/memoria` नाम से और [Glama](https://glama.ai/mcp/servers/xinzzu/Memoria) पर उपलब्ध है।
+Memoria [आधिकारिक MCP Registry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.xinzzu/memoria) पर `io.github.xinzzu/memoria` नाम से, [Glama](https://glama.ai/mcp/servers/xinzzu/Memoria) और [mcprush](https://mcprush.com/xinzzu/memoria-mcp) पर उपलब्ध है।
 
 ज़ीरो कॉन्फ़िग चाहिए? कोई भी MCP-सक्षम टूल सीधे HTTP ब्रिज की ओर भी इशारा कर सकता है:
 
