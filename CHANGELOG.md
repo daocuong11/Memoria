@@ -51,7 +51,7 @@ seluruh temuan high/medium penting diperbaiki di rilis ini.
 ## [Unreleased]
 
 ### Docs
-- Landing page in `site/` (plain HTML/CSS, no external scripts or tracking), contributed by @StreamLine-18 (#78).
+- Landing page in `site/` (plain HTML/CSS, no external scripts or tracking), contributed by @StreamLine-18 (#78). Served at https://memoria.xinzzu.web.id.
 - READMEs: npm, MCP Registry and Glama badges; a ready-to-paste stdio config (`npx -y @xinzzu/memoria mcp`) for any MCP client; `memoria integrate` shown for npm installs; the MCP tool count corrected to 9.
 - `site/` scaffold for the landing page: brief, brand tokens, shared-asset script and a stack-agnostic GitHub Pages workflow (off until enabled).
 - Hindi README (`README.hi.md`), contributed by @bhavana4123 (#72).
