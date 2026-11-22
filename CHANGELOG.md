@@ -50,6 +50,13 @@ seluruh temuan high/medium penting diperbaiki di rilis ini.
 
 ## [Unreleased]
 
+### Security
+- `@modelcontextprotocol/sdk` 1.30 → 1.32.2 and its dependency tree refreshed: `npm audit --omit=dev` goes from 9 advisories (1 critical, 4 high, 4 moderate in `proxy-addr`, `zod`, `body-parser`, `fast-uri`, `qs`, `hono` and the SDK itself) to 0. Desktop builds pick up the fixed versions from the lockfile.
+
+### MCP
+- Every tool declares MCP annotations: the six read tools are `readOnlyHint`, `remember`/`update_memory`/`forget` are marked as writes that can replace or delete content, and none touch the network (`openWorldHint: false`). Clients can auto-approve reads and confirm writes.
+- Tool descriptions say "return" instead of "fetch", since nothing is fetched from outside the local database.
+
 ### Docs
 - mcprush listing badge in every README.
 - Landing page in `site/` (plain HTML/CSS, no external scripts or tracking), contributed by @StreamLine-18 (#78). Served at https://memoria.xinzzu.web.id.
