@@ -3,6 +3,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 const require = createRequire(import.meta.url);
 
 const { textSimilarity } = require("../dist/engine/extract/dedupe.js");
@@ -279,4 +283,26 @@ test("PR-N2: isGenericMemory — noise tool/badge/markdown tersaring", async () 
     "auth flow diperbaiki\n```\nnpm run build\n```\nlanjut verifikasi manual di staging",
   ];
   for (const k of keep) assert.ok(!isGenericMemory(k), `konten nyata tidak boleh tersaring: ${k.slice(0, 60)}`);
+});
+
+test("CLI rejects unknown commands without initializing the database", (t) => {
+  const home = mkdtempSync(join(tmpdir(), "memoria-cli-home-"));
+  const dataDir = mkdtempSync(join(tmpdir(), "memoria-cli-data-"));
+  t.after(() => {
+    rmSync(home, { recursive: true, force: true });
+    rmSync(dataDir, { recursive: true, force: true });
+  });
+
+  const result = spawnSync(process.execPath, [require.resolve("../dist/engine/index.js"), "stauts"], {
+    encoding: "utf8",
+    env: { ...process.env, HOME: home, USERPROFILE: home, MEMORIA_DATA_DIR: dataDir },
+    timeout: 10_000,
+  });
+
+  assert.ifError(result.error);
+  assert.equal(result.status, 1);
+  assert.equal(result.stdout, "");
+  assert.match(result.stderr, /^Unknown command: stauts$/m);
+  assert.match(result.stderr, /^Usage: memoria <command>$/m);
+  assert.deepEqual(readdirSync(dataDir), []);
 });
