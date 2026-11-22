@@ -21,7 +21,7 @@ You have access to persistent memory (a second brain) from every AI coding tool 
 USE these tools at the START of a new session to retrieve context about previous work, and whenever the user asks about prior work.
 
 How to use:
-1. At session start, call project_context (compact index) or recall with keywords relevant to the user's task; fetch full text of the entries you need with get_memory.
+1. At session start, call project_context (compact index) or recall with keywords relevant to the user's task; read the full text of the entries you need with get_memory.
 2. Before changing code, recall project context: decisions, pending tasks, fixed errors, preferences.
 3. After finishing a task, call remember to store new memories.
 4. If a stored memory is wrong or outdated, correct it with update_memory (auto re-embeds) or remove it with forget.
@@ -67,6 +67,7 @@ export function createMcpServer(): Server {
     tools: [
       {
         name: "recall",
+        annotations: { title: "Recall memories", readOnlyHint: true, openWorldHint: false },
         description:
           "Search memories of previous work by keywords/question. Returns facts, decisions, tasks and fixed errors. Call at session start!",
         inputSchema: {
@@ -76,15 +77,16 @@ export function createMcpServer(): Server {
             limit: { type: "number", default: 8, description: "Maximum number of results" },
             project: { type: "string", description: "Optional — limit to one project (path or name)" },
             maxChars: { type: "number", description: "Optional — cut the result at N characters to fit the context window" },
-            mode: { type: "string", enum: ["full", "index"], default: "full", description: "\"index\" = one line per hit with id; fetch details with get_memory" },
+            mode: { type: "string", enum: ["full", "index"], default: "full", description: "\"index\" = one line per hit with id; get details with get_memory" },
           },
           required: ["query"],
         },
       },
       {
         name: "project_context",
+        annotations: { title: "Project context", readOnlyHint: true, openWorldHint: false },
         description:
-          "Fetch the latest context of a project: decisions, pending tasks, completed work. Default mode \"index\" returns one compact line per memory with its id (cheap on tokens); call get_memory with the ids you need for full text. Use mode \"full\" to get everything at once.",
+          "Return the latest context of a project: decisions, pending tasks, completed work. Default mode \"index\" returns one compact line per memory with its id (cheap on tokens); call get_memory with the ids you need for full text. Use mode \"full\" to get everything at once.",
         inputSchema: {
           type: "object",
           properties: {
@@ -97,6 +99,7 @@ export function createMcpServer(): Server {
       },
       {
         name: "file_context",
+        annotations: { title: "File context", readOnlyHint: true, openWorldHint: false },
         description:
           "Before editing a file, ask what is known about it: fixed errors, decisions, open tasks and preferences that mention this file path. Pass an absolute or relative path.",
         inputSchema: {
@@ -111,7 +114,8 @@ export function createMcpServer(): Server {
       },
       {
         name: "get_memory",
-        description: "Fetch the full text of specific memories by id (ids come from project_context, recall, or related).",
+        annotations: { title: "Get memories", readOnlyHint: true, openWorldHint: false },
+        description: "Return the full text of specific memories by id (ids come from project_context, recall, or related).",
         inputSchema: {
           type: "object",
           properties: {
@@ -122,6 +126,7 @@ export function createMcpServer(): Server {
       },
       {
         name: "remember",
+        annotations: { title: "Remember", readOnlyHint: false, destructiveHint: true, openWorldHint: false, idempotentHint: false },
         description: "Store an important memory (decision, fact, user preference, completed/pending task) so every tool remembers it.",
         inputSchema: {
           type: "object",
@@ -140,8 +145,9 @@ export function createMcpServer(): Server {
       },
       {
         name: "related",
+        annotations: { title: "Related memories", readOnlyHint: true, openWorldHint: false },
         description:
-          "Fetch memories connected (backlinks/similarity) to one memory. Use when recall context is incomplete or you need related detail. Pass a memory id or a text query.",
+          "Return memories connected (backlinks/similarity) to one memory. Use when recall context is incomplete or you need related detail. Pass a memory id or a text query.",
         inputSchema: {
           type: "object",
           properties: {
@@ -152,6 +158,7 @@ export function createMcpServer(): Server {
       },
       {
         name: "update_memory",
+        annotations: { title: "Update memory", readOnlyHint: false, destructiveHint: true, openWorldHint: false },
         description:
           "Correct an existing memory: replace its content (auto re-embedded so semantic search stays accurate), change its kind, or adjust importance. Pass the memory id from recall.",
         inputSchema: {
@@ -171,6 +178,7 @@ export function createMcpServer(): Server {
       },
       {
         name: "forget",
+        annotations: { title: "Forget memory", readOnlyHint: false, destructiveHint: true, openWorldHint: false, idempotentHint: true },
         description:
           "Delete a stale or wrong memory. Pass the memory id for a direct delete, or a query: a confident match is deleted immediately, otherwise candidates are listed for you to pick an explicit id.",
         inputSchema: {
@@ -183,6 +191,7 @@ export function createMcpServer(): Server {
       },
       {
         name: "build_context",
+        annotations: { title: "Build context block", readOnlyHint: true, openWorldHint: false },
         description:
           "One ready-to-use context block for a project: auto-maintained project brief + key memories + optional query matches + 1-hop relations, capped to maxChars. Ideal first call at session start.",
         inputSchema: {
