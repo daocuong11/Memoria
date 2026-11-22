@@ -9,8 +9,32 @@ import { getEmbedProvider } from "./extract/provider";
 import { extractQueue } from "./extract/extractor";
 import { getDb } from "./store/db";
 
+const HELP_TEXT = `Memoria — offline second brain for AI coding tools
+
+Usage: memoria <command>
+
+  server                 Headless mode: dashboard + API + MCP over HTTP (port 48210),
+                         capture watcher and background jobs. No Electron needed.
+  mcp                    MCP server over stdio
+  scan                   Capture new sessions once
+  recall "keywords"      Search memories
+  status                 Counts per tool
+  token                  Print the dashboard sign-in link and the API token
+  import <export.zip>    Import a ChatGPT or Claude data export
+  obsidian sync <dir>    Two-way sync with a Markdown / Obsidian folder
+  brain <export|import|on|off> [project]  Team project brain in .memoria/brain.md
+  hooks <install|remove|status>  Claude Code native hooks
+  integrate <tool>       Register Memoria in an AI tool's MCP config
+  handoff <slug>         Print the resume block for a project
+  maintain triage        Preview Tier 0 auto-triage (--apply, --undo)
+  maintain <reembed|consolidate|all>
+  sync <setup|status|export|import|folder|conflicts>
+  backup                 Back up the database
+
+Data dir: ~/.memoria (override with MEMORIA_DATA_DIR)`;
+
 async function main(): Promise<void> {
-  const cmd = process.argv[2] || "status";
+  const cmd = process.argv[2] ?? "status";
 
   switch (cmd) {
     case "scan": {
@@ -256,43 +280,25 @@ async function main(): Promise<void> {
     case "help":
     case "--help":
     case "-h": {
-      console.log(`Memoria — offline second brain for AI coding tools
-
-Usage: memoria <command>
-
-  server                 Headless mode: dashboard + API + MCP over HTTP (port 48210),
-                         capture watcher and background jobs. No Electron needed.
-  mcp                    MCP server over stdio
-  scan                   Capture new sessions once
-  recall "keywords"      Search memories
-  status                 Counts per tool
-  token                  Print the dashboard sign-in link and the API token
-  import <export.zip>    Import a ChatGPT or Claude data export
-  obsidian sync <dir>    Two-way sync with a Markdown / Obsidian folder
-  brain <export|import|on|off> [project]  Team project brain in .memoria/brain.md
-  hooks <install|remove|status>  Claude Code native hooks
-  integrate <tool>       Register Memoria in an AI tool's MCP config
-  handoff <slug>         Print the resume block for a project
-  maintain triage        Preview Tier 0 auto-triage (--apply, --undo)
-  maintain <reembed|consolidate|all>
-  sync <setup|status|export|import|folder|conflicts>
-  backup                 Back up the database
-
-Data dir: ~/.memoria (override with MEMORIA_DATA_DIR)`);
+      console.log(HELP_TEXT);
       break;
     }
-    case "status":
-    default: {
+    case "status": {
       ensureDb();
       const s = stats();
       const cfg = getConfig();
       console.log(`Data dir   : ${cfg.dataDir}`);
       console.log(`Transcript : ${s.transcripts}`);
-      console.log(`Memori     : ${s.memories}`);
+      console.log(`Memories   : ${s.memories}`);
       console.log(`Ollama     : http://localhost:11434 (extract model: ${cfg.ollamaExtractModel})`);
       const db = getDb();
       const perTool = db.prepare("SELECT tool, COUNT(*) AS c FROM transcripts GROUP BY tool").all() as Array<{ tool: string; c: number }>;
       for (const t of perTool) console.log(`  - ${t.tool}: ${t.c}`);
+      break;
+    }
+    default: {
+      console.error(`Unknown command: ${cmd}\n${HELP_TEXT}`);
+      process.exitCode = 1;
       break;
     }
   }

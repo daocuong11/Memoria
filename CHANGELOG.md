@@ -50,6 +50,9 @@ seluruh temuan high/medium penting diperbaiki di rilis ini.
 
 ## [Unreleased]
 
+### Fixed
+- Unknown CLI commands now print an error and usage and exit with code 1. The status output labels the memory count "Memories".
+
 ### Security
 - `@modelcontextprotocol/sdk` 1.30 → 1.32.2 and its dependency tree refreshed: `npm audit --omit=dev` goes from 9 advisories (1 critical, 4 high, 4 moderate in `proxy-addr`, `zod`, `body-parser`, `fast-uri`, `qs`, `hono` and the SDK itself) to 0. Desktop builds pick up the fixed versions from the lockfile.
 
