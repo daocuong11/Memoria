@@ -50,6 +50,9 @@ seluruh temuan high/medium penting diperbaiki di rilis ini.
 
 ## [Unreleased]
 
+### Docs
+- `glama.json` declares the Glama maintainer.
+
 ## [0.16.2] — 2026-11-22 — Community
 
 **Three outside contributors in one release: thank you @bhavana4123 (Hindi README), @StreamLine-18 (landing page at https://memoria.xinzzu.web.id) and @jamesyshd19-cmyk (CLI unknown-command fix).** Also: zero known advisories in production dependencies, MCP tool annotations, and automatic MCP Registry publishing from CI.
