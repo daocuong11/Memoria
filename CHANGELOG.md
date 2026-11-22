@@ -50,6 +50,13 @@ seluruh temuan high/medium penting diperbaiki di rilis ini.
 
 ## [Unreleased]
 
+## [0.16.3] — 2026-11-22 — Listings
+
+**Housekeeping for MCP directories.** No change to the app or the MCP tools.
+
+### CI
+- The GitHub Release job now waits for the npm publish, so directories that rebuild on a GitHub release (Glama Auto-Release) install the new version.
+
 ### Docs
 - `glama.json` declares the Glama maintainer.
 
