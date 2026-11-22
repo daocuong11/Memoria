@@ -3,7 +3,7 @@
   "name": "io.github.xinzzu/memoria",
   "title": "Memoria",
   "description": "Local-first memory for AI coding tools: recall decisions, tasks and fixes across sessions.",
-  "version": "0.16.1",
+  "version": "0.16.2",
   "repository": {
     "url": "https://github.com/xinzzu/Memoria",
     "source": "github"
@@ -13,7 +13,7 @@
     {
       "registryType": "npm",
       "identifier": "@xinzzu/memoria",
-      "version": "0.16.1",
+      "version": "0.16.2",
       "runtimeHint": "npx",
       "transport": { "type": "stdio" },
       "packageArguments": [{ "type": "positional", "value": "mcp" }]
