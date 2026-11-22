@@ -50,8 +50,16 @@ seluruh temuan high/medium penting diperbaiki di rilis ini.
 
 ## [Unreleased]
 
+## [0.16.2] — 2026-11-22 — Community
+
+**Three outside contributors in one release: thank you @bhavana4123 (Hindi README), @StreamLine-18 (landing page at https://memoria.xinzzu.web.id) and @jamesyshd19-cmyk (CLI unknown-command fix).** Also: zero known advisories in production dependencies, MCP tool annotations, and automatic MCP Registry publishing from CI.
+
+### CI
+- Release tags now publish `server.json` to the official MCP Registry through GitHub OIDC after the npm package is live, so the registry listing follows every release without a manual login.
+
+
 ### Fixed
-- Unknown CLI commands now print an error and usage and exit with code 1. The status output labels the memory count "Memories".
+- Unknown CLI commands now print an error and usage and exit with code 1. The status output labels the memory count "Memories". Contributed by @jamesyshd19-cmyk (#88).
 
 ### Security
 - `@modelcontextprotocol/sdk` 1.30 → 1.32.2 and its dependency tree refreshed: `npm audit --omit=dev` goes from 9 advisories (1 critical, 4 high, 4 moderate in `proxy-addr`, `zod`, `body-parser`, `fast-uri`, `qs`, `hono` and the SDK itself) to 0. Desktop builds pick up the fixed versions from the lockfile.
