@@ -6,6 +6,12 @@
 (function () {
   var ID = {
   "Memory summary across all AI tools": "Ringkasan memori lintas semua AI tools",
+  "Learning journal": "Jurnal belajar",
+  "Errors fixed in the last 7 days. Recurring ones are worth a permanent fix.": "Error yang diperbaiki 7 hari terakhir. Yang berulang layak diperbaiki permanen.",
+  "No fixed errors this week.": "Belum ada error yang diperbaiki minggu ini.",
+  "{0} fixed, {1} recurring": "{0} diperbaiki, {1} berulang",
+  "recurring ×{0}": "berulang ×{0}",
+  "Files that keep breaking": "File yang sering rusak",
   "Search and manage stored memories": "Cari dan kelola memori tersimpan",
   "Activity by project": "Aktivitas berdasarkan proyek",
   "Per-project activity trail": "Jejak aktivitas per proyek",

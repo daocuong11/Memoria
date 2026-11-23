@@ -50,6 +50,10 @@ seluruh temuan high/medium penting diperbaiki di rilis ini.
 
 ## [Unreleased]
 
+### Learning journal
+- **What this week's errors taught you**, built from `error_fixed` memories with no model: fixes are grouped by text similarity per project, a group is *recurring* when the same error was fixed in the 90 days before or more than once this week, and files mentioned in more than one distinct fix are listed as "files that keep breaking". Recurring fixes come first.
+- Shown as an Overview card, appended to the weekly digest (and its webhook event carries `fixes` / `recurringFixes`), `GET /api/journal?days=&project=`, and `memoria journal [days]`.
+
 ## [0.16.3] — 2026-11-22 — Listings
 
 **Housekeeping for MCP directories.** No change to the app or the MCP tools.

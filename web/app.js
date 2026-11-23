@@ -226,8 +226,33 @@ async function loadUsage() {
   }
 }
 
+/* Kartu Overview: jurnal belajar mingguan (pasangan error→fix, berulang dulu). */
+async function loadJournal() {
+  const body = document.getElementById("journalBody");
+  if (!body) return;
+  try {
+    const j = await api("/api/journal?days=7");
+    if (!j.entries || !j.entries.length) {
+      body.textContent = t("No fixed errors this week.");
+      return;
+    }
+    const head = `<div style="margin-bottom:6px">${esc(t("{0} fixed, {1} recurring", j.fixes, j.recurring.length))}</div>`;
+    const rows = j.entries.slice(0, 6).map((e) => {
+      const n = e.timesThisWeek + e.timesBefore;
+      const tag = e.recurring ? `<span class="chip" style="margin-right:6px; color:var(--amber, #d9a05b)">${esc(t("recurring ×{0}", n))}</span>` : "";
+      return `<div style="padding:4px 0; border-top:1px solid var(--border)">${tag}${esc(e.content)} <span class="muted">· ${esc(e.project)}</span></div>`;
+    }).join("");
+    const files = (j.topFiles || []).length
+      ? `<div style="margin-top:6px">${esc(t("Files that keep breaking"))}: ${j.topFiles.slice(0, 4).map((f) => `<code>${esc(f.file)}</code> (${f.count})`).join(", ")}</div>`
+      : "";
+    body.innerHTML = head + rows + files;
+  } catch {
+    body.textContent = "";
+  }
+}
 async function loadStats() {
   loadUsage();
+  loadJournal();
   try {
     state.stats = await api("/api/stats");
     $("#sTranscripts").textContent = state.stats.transcripts.toLocaleString("id-ID");
