@@ -50,6 +50,11 @@ seluruh temuan high/medium penting diperbaiki di rilis ini.
 
 ## [Unreleased]
 
+### Tier 0 measured on real data
+- **The synthetic eval was optimistic.** On a hand-labelled sample of 296 heuristic memories from a real library (mostly Indonesian, casual agent chat), current triage reached 40% active precision and removed 57% of noise; the synthetic set reports 100% / 100%. Rules were tuned on that sample and checked on a separate held-out sample of 150, labelled before the classifier ran.
+- **Held-out result:** active precision 31% → 41%, noise removed 59% → 70%, memories kept 91% → 91%. Changes: more Indonesian agent-chatter phrases and a new `user-request` rule (raw user requests such as "tambahin … dong") in `noise-lang/id.json`; known harness lines in `en.json`; structural rules for answered-question echoes, tool receipts, `throw new …` and template-literal lines, object-property / f-string lines, and lead-ins that end in a colon. Listing line numbers (`12 - …`, `5: …`) are stripped and the rest judged on its own, so a documented decision in a file listing is no longer dropped.
+- Raising the promotion threshold does not help (the heuristic score does not separate memory from chatter well on this data), so auto-promoted heuristic memories should still be treated as drafts of uneven quality; an LLM provider (Ollama or OpenAI-compatible) remains the way to get clean extraction.
+
 ### Context cost and recall scope
 - **`scripts/audit-context.mjs`** measures what Memoria actually hands an agent, on a read-only copy of a database. On a real library (25 projects, 480 active memories): resume block median **455 tokens** (max 745), Claude Code SessionStart hook median 267, `project_context` index median 300, `build_context` median 490, `recall` hits median 165.
 - **Scoped recall follows the git repository.** One repository often became several projects (`repo`, `repo/contracts`, `repo/services/api`), and scoped `recall`, `project_context`, `build_context` and `file_context` saw only the exact folder. They now include every project in the same git work tree; nested repositories and folders outside git keep the exact scope. In the audit, project-scoped recalls with no hit went from 17/32 to 10/32 (the rest have no matching memory at all).

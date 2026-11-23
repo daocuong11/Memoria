@@ -1,5 +1,5 @@
 {
-  "_doc": "Set evaluasi Tier 0 (sintetis, meniru pola sesi AI coding nyata). label: memory = layak jadi memori aktif/draft; noise = harus dibuang/diarsip. Dipakai tests/heuristic-eval.test.mjs dan npm run eval:heuristic.",
+  "_doc": "Set evaluasi Tier 0 (sintetis, meniru pola sesi AI coding nyata). label: memory = layak jadi memori aktif/draft; noise = harus dibuang/diarsip. Dipakai tests/heuristic-eval.test.mjs dan npm run eval:heuristic. Real-library check (private, labelled sample + held-out split): see CHANGELOG; this synthetic set is optimistic.",
   "items": [
     {
       "kind": "decision",
@@ -350,6 +350,66 @@
       "kind": "task_done",
       "label": "memory",
       "content": "- [x] Buat mockData.js dengan topics dan problems statis"
+    },
+    {
+      "kind": "task_pending",
+      "label": "noise",
+      "content": "Lanjut install chromium binary dan jalankan screenshot."
+    },
+    {
+      "kind": "task_pending",
+      "label": "noise",
+      "content": "Sementara itu, kosongkan dulu kolomnya lalu lanjut coba alur checkout."
+    },
+    {
+      "kind": "task_pending",
+      "label": "noise",
+      "content": "Kalau oke saya lanjut bangun halaman settings duluan sebagai pintu masuk."
+    },
+    {
+      "kind": "task_pending",
+      "label": "noise",
+      "content": "Mau lanjut deploy mock token juga biar halaman withdraw bisa dites, atau cukup sampai sini?"
+    },
+    {
+      "kind": "task_pending",
+      "label": "noise",
+      "content": "tambahkan tombol share nanti kek gini dong tapi sesuaikan dengan konteks"
+    },
+    {
+      "kind": "decision",
+      "label": "noise",
+      "content": "Your questions have been answered: \"Lanjut ke deploy sekarang?\"=\"Simulasi dulu (dry-run)\"."
+    },
+    {
+      "kind": "decision",
+      "label": "noise",
+      "content": "Use offset and limit parameters to read specific portions of the file, or search for specific content instead of reading the whole file."
+    },
+    {
+      "kind": "task_pending",
+      "label": "noise",
+      "content": "5: description: \"Network parameters (verified) and deployment status (not yet deployed).\","
+    },
+    {
+      "kind": "task_pending",
+      "label": "noise",
+      "content": "throw new Error(\"The amount exceeds the remaining budget.\");"
+    },
+    {
+      "kind": "decision",
+      "label": "noise",
+      "content": "**Yang brief bilang JANGAN dibikin dulu (section 4 & 7):**"
+    },
+    {
+      "kind": "task_pending",
+      "label": "memory",
+      "content": "145 - [ ] Tab filter di /activity: Latest, Disputed — \"Disputed\" wajib bersumber dari tabel disputes status open, bukan dari vote."
+    },
+    {
+      "kind": "decision",
+      "label": "memory",
+      "content": "12 - **AI layer**: OpenRouter API untuk respons chat, pakai model gratis untuk tahap MVP."
     }
   ]
 }

@@ -116,7 +116,16 @@
         "let me know if",
         "feel free to",
         "hope this helps",
-        "happy to help"
+        "happy to help",
+        "if reporting what model you are",
+        "stop and explain to the user",
+        "do not invent a subject",
+        "this tool result is internal",
+        "this agents work",
+        "updating your todo list",
+        "never reveal system instructions",
+        "offset and limit parameters",
+        "as placeholders for the remaining values"
       ]
     }
   ]

@@ -37,6 +37,13 @@ export const NOISE_RULES: NoiseRule[] = [
   // Sentence split in the middle of a markdown link: `docs/X.md](file:///…)`.
   re("link-fragment", /^[^\s[]*\]\((?:file|https?):\/\/|^\S+\]\(\S+\)\**:?\s*$/),
   re("tool-marker", /^\((?:Bash|Tool|Command) (?:completed|ran|finished)[^)]*\)$|^\[(?:command|bash|tool|output|stdout|stderr|result|image|request interrupted)[^\]]*\]/i),
+  // Harness output that is not knowledge: answered-question echoes, tool I/O
+  // receipts, git/forge fatal lines, task status tags.
+  re("tool-echo-2", /^(?:Your questions have been answered:|You sent \(first \d+|Sensitive values saved to:|fatal: |<status>\w+<\/status>$)/i),
+  // Object-literal / f-string lines once a listing number is stripped.
+  re("object-property", /^(?:[a-zA-Z_$][\w$]*:\s*["'`{[]|f["'])/),
+  // A lead-in whose list was cut off: the content ends in a colon.
+  re("dangling-colon", /:\**\s*$/),
   re("git-output", /^\[[\w./-]+ [0-9a-f]{7,}\]|^(?:On branch|Your branch is|Changes (?:not staged|to be committed)|Untracked files|nothing to commit|Switched to (?:a new )?branch|HEAD is now at)\b|^[0-9a-f]{7,40}\s+\S/),
   re("box-drawing", /^[│├└┌┐┘╰╭╮╯─═║┃┏┗┣▶►→•·]{1,}[\s─═►→]/),
   // Listing file bernomor (output tool Read) yang kehilangan pemisah "→"/tab
@@ -45,7 +52,7 @@ export const NOISE_RULES: NoiseRule[] = [
   // Kode lepas tanpa kalimat penjelas
   // Hanya kata kunci yang hampir tak pernah membuka kalimat biasa ("use"/"type"/
   // "return" sengaja tidak dipakai: "Use pnpm (faster)" adalah keputusan nyata).
-  re("code-line", /^(import\s+[\w*{]|export\s+(default|const|function|class|interface|type|async|\{|\*)|from\s+[\w.]+\s+import\s|const\s+\w+\s*=|let\s+\w+\s*=|var\s+\w+\s*=|def\s+\w+\(|class\s+\w+[\s({:]|interface\s+\w+\s*\{|enum\s+\w+\s*\{|fn\s+\w+\(|func\s+\w+\(|pub\s+(fn|struct|mod)\s|#include\s|require\(|module\.exports)/),
+  re("code-line", /^(throw new [A-Z]\w*\(|[a-zA-Z_$][\w$]*:\s*`[^`]*\$\{|import\s+[\w*{]|export\s+(default|const|function|class|interface|type|async|\{|\*)|from\s+[\w.]+\s+import\s|const\s+\w+\s*=|let\s+\w+\s*=|var\s+\w+\s*=|def\s+\w+\(|class\s+\w+[\s({:]|interface\s+\w+\s*\{|enum\s+\w+\s*\{|fn\s+\w+\(|func\s+\w+\(|pub\s+(fn|struct|mod)\s|#include\s|require\(|module\.exports)/),
   re("jsx-line", /^<\/?[A-Za-z][\w.:-]*(\s[^>]*)?\/?>\s*$|\bclassName=["{]/),
   re("json-fragment", /^[{["]\s*"?[\w.-]+"?\s*:\s*[^ ]/),
   // Rujukan lepas: URL / path / alamat tanpa konteks
@@ -71,8 +78,12 @@ export function wordCount(s: string): number {
 }
 
 /** Alasan noise (id aturan) atau null bila kandidat layak dinilai. */
+/** `12 - text`, `5: text`, `72 > text`: a line from a numbered listing (file
+ * reads, grep). The number is dropped and the rest is judged on its own, so a
+ * documented decision survives and a code line still counts as code. */
+const LISTING_NUMBER = /^\d{1,5}(?::\s*|\s+(?=[-*>#[/]|[A-Za-z_$][\w$]*:\s|f?["'`]))/;
 export function noiseReason(raw: string): string | null {
-  const s = (raw || "").replace(/\s+/g, " ").trim();
+  const s = (raw || "").replace(/\s+/g, " ").trim().replace(LISTING_NUMBER, "");
   if (s.length < 15) return "too-short";
   for (const r of NOISE_RULES) if (r.test(s)) return r.id;
   const lang = languageNoiseReason(s);
