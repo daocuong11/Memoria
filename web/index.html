@@ -598,6 +598,34 @@
     .bars .bar { background: var(--grad); box-shadow: 0 0 12px rgba(110,141,255,.25); border-radius: 7px 7px 4px 4px; }
     .bars .bar.zero { background: var(--border); box-shadow: none; }
     .resume-dot { animation: pulse 2s infinite; }
+    /* Learning journal card */
+    .jr-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+    .jr-range { font-size: 11.5px; color: var(--faint); }
+    .jr-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0 14px; }
+    .jr-stat { background: var(--pill-bg); border: 1px solid var(--border-soft); border-radius: 10px; padding: 9px 11px; }
+    .jr-stat b { display: block; font-size: 20px; font-weight: 650; line-height: 1.15; color: var(--text); font-variant-numeric: tabular-nums; }
+    .jr-stat span { font-size: 11.5px; color: var(--muted); }
+    .jr-stat.rec b { color: var(--amber); }
+    .jr-trend { font-size: 11px; margin-left: 4px; color: var(--faint); font-weight: 500; }
+    .jr-label { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); margin: 4px 0 6px; }
+    .jr-item { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; cursor: pointer;
+      border: 1px solid transparent; transition: background .12s, border-color .12s; }
+    .jr-item:hover, .jr-item:focus-visible { background: var(--hover-wash); border-color: var(--border); outline: none; }
+    .jr-item.rec { border-left: 3px solid var(--amber); background: color-mix(in srgb, var(--amber) 6%, transparent); margin-bottom: 6px; }
+    .jr-body { flex: 1; min-width: 0; }
+    .jr-text { font-size: 13px; color: var(--text); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .jr-meta { margin-top: 4px; font-size: 11.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .jr-file { font-family: var(--mono); font-size: 10.5px; padding: 1px 6px; border-radius: 6px; background: var(--panel-2); border: 1px solid var(--border-soft); color: var(--muted); }
+    .jr-count { flex: none; font-size: 15px; font-weight: 650; color: var(--amber); font-variant-numeric: tabular-nums; padding-top: 1px; }
+    .jr-new { display: flex; gap: 10px; align-items: center; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 12.5px; color: var(--muted); }
+    .jr-new:hover, .jr-new:focus-visible { background: var(--hover-wash); color: var(--text); outline: none; }
+    .jr-new .jr-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex: none; }
+    .jr-new .jr-one { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .jr-new .jr-when { flex: none; font-size: 11px; color: var(--faint); }
+    .jr-empty { padding: 14px 2px 4px; }
+    .jr-empty b { display: block; font-size: 13.5px; color: var(--text); margin-bottom: 3px; }
+    .jr-empty span { font-size: 12.5px; color: var(--muted); }
+    .jr-more { margin-top: 6px; font-size: 12px; color: var(--accent); cursor: pointer; background: none; border: 0; padding: 4px 12px; }
     .resume-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px;
       border: 1px solid transparent; transition: background .12s; font-size: 12.5px; }
     .resume-item:hover { background: rgba(110,141,255,.07); border-color: rgba(110,141,255,.2); }
@@ -1070,6 +1098,13 @@
               </div>
               <canvas id="activityChart" height="190"></canvas>
             </div>
+            <div class="card jr-card" style="margin-top:16px" id="journalCard">
+              <div class="jr-head">
+                <h4 data-i18n="Learning journal">Learning journal</h4>
+                <span class="jr-range" data-i18n="Last 7 days">Last 7 days</span>
+              </div>
+              <div id="journalBody"></div>
+            </div>
 
             <div class="card" style="margin-top:16px">
               <h4 data-i18n="Resume ready">Resume ready</h4>
@@ -1083,11 +1118,6 @@
               <div id="usageBody" class="muted" style="margin-top:8px; font-size:13px"></div>
             </div>
 
-            <div class="card" style="margin-top:16px" id="journalCard">
-              <h4 data-i18n="Learning journal">Learning journal</h4>
-              <div class="card-desc" data-i18n="Errors fixed in the last 7 days. Recurring ones are worth a permanent fix.">Errors fixed in the last 7 days. Recurring ones are worth a permanent fix.</div>
-              <div id="journalBody" class="muted" style="margin-top:8px; font-size:13px"></div>
-            </div>
             <div class="section" style="margin-top:20px">
               <div class="section-head"><h3 data-i18n="Recent memories">Recent memories</h3><a id="linkAllMem" data-i18n="View all">View all</a></div>
               <div id="recentList"></div>

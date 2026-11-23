@@ -39,6 +39,7 @@ fix("ECONNREFUSED on npm start: DATABASE_URL missing in .env.local", 1, { projec
 test("groups fixes, flags recurring ones first, counts history", () => {
   const j = learningJournal({ days: 7, now: NOW });
   assert.equal(j.fixes, 5, "4 shop fixes + 1 blog fix in the window");
+  assert.equal(j.previousFixes, 0, "nothing in the 7 days before the window");
   assert.equal(j.entries.length, 4, "the two cart fixes are one error");
   const env = j.entries.find((e) => e.project === "shop" && /DATABASE_URL/.test(e.content));
   assert.ok(env.recurring);
