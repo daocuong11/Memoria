@@ -26,6 +26,7 @@ Usage: memoria <command>
   hooks <install|remove|status>  Claude Code native hooks
   integrate <tool>       Register Memoria in an AI tool's MCP config
   handoff <slug>         Print the resume block for a project
+  journal [days]         Learning journal: fixed errors, recurring first (default 7 days)
   maintain triage        Preview Tier 0 auto-triage (--apply, --undo)
   maintain <reembed|consolidate|all>
   sync <setup|status|export|import|folder|conflicts>
@@ -266,6 +267,14 @@ async function main(): Promise<void> {
         process.exit(1);
       }
       console.log(`Synced ${r.notes} notes in ${r.dir}: ${r.written} written, ${r.updatedFromNotes} updated from notes, ${r.createdFromNotes} new, ${r.archivedFromNotes} archived, ${r.conflicts} conflicts`);
+      break;
+    }
+    case "journal": {
+      // memoria journal [days]  — fixed errors of the period, recurring first
+      ensureDb();
+      const { learningJournal } = await import("./summary/journal");
+      const days = Number(process.argv[3] || 7);
+      console.log(learningJournal({ days: Number.isFinite(days) ? days : 7 }).markdown);
       break;
     }
     case "token": {

@@ -3,6 +3,7 @@ import * as path from "node:path";
 import { getConfig } from "../config";
 import { allMemories, allTags, getSetting, setSetting, projectSlugById } from "../store/db";
 import { emitEvent } from "../events";
+import { learningJournal } from "./journal";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 export const DIGEST_FILE = "weekly-digest.md";
@@ -82,6 +83,9 @@ export function generateWeeklyDigest(): WeeklyDigest {
     }
     lines.push(``);
   }
+  const journal = learningJournal({ days: 7, now: until });
+  lines.push(journal.markdown);
+  lines.push(``);
   lines.push(`_Dibuat otomatis oleh Memoria._`);
 
   const text = lines.join("\n");
@@ -94,6 +98,8 @@ export function generateWeeklyDigest(): WeeklyDigest {
     memories: mems.length,
     perTool: topTool.map((t) => ({ tool: t.key, count: t.count })),
     topProjects: topProj.map((p) => ({ slug: p.key, count: p.count })),
+    fixes: journal.fixes,
+    recurringFixes: journal.recurring.length,
   });
 
   return {

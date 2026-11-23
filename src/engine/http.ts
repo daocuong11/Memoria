@@ -888,6 +888,16 @@ export function startHttpServer(): Promise<void> {
           limit,
           hasMore: offset + mems.length < total,
         });
+      } else if (url.pathname === "/api/journal" && req.method === "GET") {
+        const { learningJournal } = await import("./summary/journal");
+        const { resolveProject } = await import("./store/db");
+        const slug = url.searchParams.get("project") || "";
+        const proj = slug ? resolveProject(slug) : null;
+        if (slug && !proj) {
+          sendJson(res, 404, { error: "unknown project" });
+          return;
+        }
+        sendJson(res, 200, learningJournal({ days: Number(url.searchParams.get("days") || 7), project: proj ? proj.id : null }));
       } else if (url.pathname === "/api/digest" && req.method === "GET") {
         const { latestDigestText } = await import("./summary/weekly");
         sendJson(res, 200, { text: latestDigestText() });
