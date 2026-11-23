@@ -40,3 +40,6 @@ desktop.ini
 site/**/shared/
 site/dist/
 site/node_modules/
+
+# Private eval labels built from a real library (never committed)
+.eval-private/

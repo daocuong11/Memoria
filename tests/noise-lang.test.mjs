@@ -10,7 +10,7 @@ const require = createRequire(import.meta.url);
 const lang = require("../dist/engine/extract/noise-lang/index.js");
 const { noiseReason } = require("../dist/engine/extract/noise.js");
 const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "src", "engine", "extract", "noise-lang");
-const KNOWN_IDS = new Set(["agent-narration", "offer-question", "generic-agent"]);
+const KNOWN_IDS = new Set(["agent-narration", "offer-question", "generic-agent", "user-request"]);
 
 test("every language file is valid and registered", () => {
   const files = fs.readdirSync(SRC).filter((f) => f.endsWith(".json"));
@@ -52,6 +52,9 @@ test("matching: whole words, apostrophes and commas ignored, both languages", ()
     "Would you like me to add tests for the parser too?": "offer-question",
     "Deployed the fix; hope this helps with the release.": "generic-agent",
     "Semoga membantu ya kalau ada pertanyaan lagi.": "generic-agent",
+    "Sementara itu, kosongkan dulu kolomnya lalu coba lagi.": "agent-narration",
+    "Tolong tambahkan tombol share di halaman hasil.": "user-request",
+    "Use offset and limit parameters to read specific portions of the file.": "generic-agent",
   };
   for (const [text, id] of Object.entries(cases)) assert.equal(noiseReason(text), id, text);
   const keep = [
@@ -59,6 +62,8 @@ test("matching: whole words, apostrophes and commas ignored, both languages", ()
     "Let measure performance with a benchmark before merge.",
     "Use pnpm workspaces because they are faster here.",
     "Checkout uses Stripe; refunds go through the admin panel.",
+    "Lanjutan dari keputusan kemarin: indexer pakai Postgres, bukan polling.",
+    "12 - AI layer pakai OpenRouter untuk respons chat di tahap MVP.",
   ];
   for (const text of keep) assert.equal(noiseReason(text), null, text);
 });

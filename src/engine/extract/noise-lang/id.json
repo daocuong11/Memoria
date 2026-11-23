@@ -37,7 +37,34 @@
         "saya mulai kerjain",
         "saya mulai kerjakan",
         "saya mulai mengerjakan",
-        "aku mulai kerjain"
+        "aku mulai kerjain",
+        "lanjut",
+        "saya lanjut",
+        "saya lanjutkan",
+        "sekarang lanjut",
+        "sekarang tinggal",
+        "sekarang coba",
+        "sekarang sambungkan",
+        "cuma tinggal",
+        "tinggal paste",
+        "sementara itu",
+        "sambil nunggu",
+        "sambil menunggu",
+        "sebelum lanjut",
+        "sebelum nulis",
+        "sebelum coding",
+        "begitu kamu",
+        "begitu kebuka",
+        "kalau oke",
+        "kalau belum",
+        "abis punya",
+        "beres",
+        "sudah dibuat",
+        "dua-duanya sudah",
+        "silakan",
+        "fokus ke",
+        "opsi lain",
+        "atau"
       ]
     },
     {
@@ -53,7 +80,9 @@
         "apakah mau",
         "perlu saya",
         "perlu aku",
-        "kalau mau"
+        "kalau mau",
+        "mau lanjut",
+        "kalau mau lanjut"
       ]
     },
     {
@@ -63,6 +92,44 @@
         "semoga membantu",
         "ada yang lain",
         "ada yang bisa"
+      ]
+    },
+    {
+      "id": "agent-narration",
+      "at": "anywhere",
+      "phrases": [
+        "tinggal bilang",
+        "kabarin saya",
+        "kabari saya",
+        "nunggu feedback",
+        "nunggu kamu"
+      ]
+    },
+    {
+      "id": "user-request",
+      "at": "start",
+      "phrases": [
+        "coba dong",
+        "tolong",
+        "bantu",
+        "tambahin",
+        "ilangin",
+        "enaknya",
+        "enakanya",
+        "berarti",
+        "oiya",
+        "jangan kayak gini"
+      ]
+    },
+    {
+      "id": "user-request",
+      "at": "anywhere",
+      "phrases": [
+        "dong",
+        "bisa dibantu",
+        "kan ya",
+        "gimana ya",
+        "bantu install"
       ]
     }
   ]
