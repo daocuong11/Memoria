@@ -50,6 +50,10 @@ seluruh temuan high/medium penting diperbaiki di rilis ini.
 
 ## [Unreleased]
 
+### Sync
+- **Devices in the dashboard:** Settings → Sync lists this device and every device whose bundles were applied here (last bundle, count, revoked state), with **Rotate key** and per-device **Revoke**. A confirmation dialog asks for the sync passphrase when the key is passphrase-protected, then shows the new recovery code once as a ready-to-copy `memoria sync setup --join … --force` command. `GET /api/sync/devices`, `POST /api/sync/rotate`, `POST /api/sync/revoke` (both require `confirm: true`).
+- **Fix:** rotating or revoking no longer loses the new recovery code when the full re-export fails (for example on an empty database). The key change is reported with the export error instead of an error that hid the code; this also applied to `memoria sync rotate|revoke`.
+
 ### Learning journal
 - **What this week's errors taught you**, built from `error_fixed` memories with no model: fixes are grouped by text similarity per project, a group is *recurring* when the same error was fixed in the 90 days before or more than once this week, and files mentioned in more than one distinct fix are listed as "files that keep breaking". Recurring fixes come first.
 - Overview card right under the activity chart: fixed / keep-coming-back / new counts with a trend against the previous 7 days, recurring fixes with how often and where, new fixes as one-line rows, and every row opens the memory (keyboard too). Also appended to the weekly digest (and its webhook event carries `fixes` / `recurringFixes`), `GET /api/journal?days=&project=`, and `memoria journal [days]`.
