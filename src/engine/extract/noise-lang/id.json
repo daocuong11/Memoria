@@ -1,0 +1,69 @@
+{
+  "language": "id",
+  "name": "Bahasa Indonesia",
+  "rules": [
+    {
+      "id": "agent-narration",
+      "at": "start",
+      "phrases": [
+        "mari saya",
+        "mari kita",
+        "sekarang saya",
+        "sekarang aku",
+        "sekarang kita",
+        "oke saya",
+        "oke aku",
+        "oke sekarang",
+        "oke kita",
+        "baik saya",
+        "baik sekarang",
+        "saya akan cek",
+        "saya akan lihat",
+        "saya akan baca",
+        "saya akan jalankan",
+        "saya akan periksa",
+        "saya akan mulai",
+        "saya tunggu",
+        "saya lanjut ke",
+        "saya lanjut dengan",
+        "saya lanjut dari",
+        "saya mulai ke",
+        "saya mulai dengan",
+        "saya mulai dari",
+        "aku cek",
+        "aku lihat",
+        "aku baca",
+        "aku tunggu",
+        "saya mulai kerjain",
+        "saya mulai kerjakan",
+        "saya mulai mengerjakan",
+        "aku mulai kerjain"
+      ]
+    },
+    {
+      "id": "offer-question",
+      "at": "start",
+      "phrases": [
+        "mau saya",
+        "mau aku",
+        "mau ku",
+        "mau gue",
+        "apakah kamu",
+        "apakah anda",
+        "apakah mau",
+        "perlu saya",
+        "perlu aku",
+        "kalau mau"
+      ]
+    },
+    {
+      "id": "generic-agent",
+      "at": "anywhere",
+      "phrases": [
+        "semoga membantu",
+        "ada yang lain",
+        "ada yang bisa"
+      ]
+    }
+  ]
+}

@@ -60,7 +60,9 @@ ulang konteks.
 - node:sqlite mengembalikan objek null-prototype — akses properti eksplisit.
 - `closeDb()` membersihkan memo id proyek; jangan cache id lintas handle DB.
 - Peran transkrip: `tool` = output tool (dilewati ekstraksi), `system` = meta.
-- Aturan noise baru → `NOISE_RULES` + contoh di `tests/fixtures/heuristic-eval.json`
+- Aturan noise struktural (shell/kode/output tool) → `NOISE_RULES` di `extract/noise.ts`;
+  obrolan agen per bahasa → frasa di `extract/noise-lang/<lang>.json` (bukan regex,
+  daftarkan di `index.ts`). Tambah contoh di `tests/fixtures/heuristic-eval.json`
   → `npm run eval:heuristic`. Pola noise pengguna = substring, bukan regex.
 - `#overlay`/`#toast-wrap` wajib anak langsung `<body>` (dijaga `check:ui`).
 - String UI: English sebagai kunci `t()`, terjemahan di `web/i18n.js`; tanpa emoji.
