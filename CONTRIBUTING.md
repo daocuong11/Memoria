@@ -79,5 +79,6 @@ that also starts real decisions ("use", "we decided") would drop real memories.
 - Isolated servers: `MEMORIA_DATA_DIR=$(mktemp -d)` (+ fake `HOME`).
 - Benchmark: `node scripts/bench-f1c.mjs 5000` (target < 100 ms).
 - Retrieval eval: `node scripts/eval-search.mjs [topics] [noise]`.
+- Context cost on your own data (read-only copy): `node scripts/audit-context.mjs [memory.db]`.
 - The review/QA server must never run against your real `~/.memoria` with a
   real `HOME` — copy the DB to a temp dir instead.

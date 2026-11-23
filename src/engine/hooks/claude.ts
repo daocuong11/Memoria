@@ -46,6 +46,22 @@ async function readStdin(timeoutMs = 2000): Promise<string> {
   });
 }
 
+/** `body` without the lines already present in `file`; "" when only
+ * headings would remain. Missing or unreadable file: `body` unchanged. */
+function withoutLinesIn(body: string, file: string): string {
+  let existing = "";
+  try {
+    existing = fs.readFileSync(file, "utf8");
+  } catch {
+    return body;
+  }
+  const seen = new Set(existing.split("\n").map((l) => l.trim()).filter((l) => l.length > 8));
+  if (!seen.size) return body;
+  const kept = body.split("\n").filter((l) => !seen.has(l.trim()));
+  const content = kept.filter((l) => l.trim() && !/^#{1,6}\s/.test(l.trim()) && !/^[-*]\s*$/.test(l.trim()));
+  if (!content.length) return "";
+  return kept.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
 /** Resume text for the project in `cwd`, or "" when Memoria knows nothing. */
 export async function sessionStartContext(cwd: string): Promise<string> {
   const db = require("../store/db") as typeof import("../store/db");
@@ -60,9 +76,15 @@ export async function sessionStartContext(cwd: string): Promise<string> {
     body = block.startsWith("No project found") ? "" : block;
   }
   if (!body) return "";
+  // Claude Code already loads CLAUDE.md, where Memoria writes the same resume
+  // block. Send only the lines it does not contain, or just a pointer when
+  // nothing is new (scripts/audit-context.mjs measures the duplicate).
+  body = withoutLinesIn(body, path.join(cwd, "CLAUDE.md"));
+  const tools = "Use the memoria MCP tools (project_context, recall, get_memory, file_context) for more.";
+  if (!body) return `Memoria: the resume block for this project is in CLAUDE.md. ${tools}`;
   const text =
     "Memoria: context from earlier sessions on this project (across all AI tools). " +
-    "Use the memoria MCP tools (project_context, recall, get_memory, file_context) for more.\n\n" +
+    tools + "\n\n" +
     body;
   return text.length > MAX_CONTEXT_CHARS ? text.slice(0, MAX_CONTEXT_CHARS - 1) + "…" : text;
 }

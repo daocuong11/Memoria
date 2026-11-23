@@ -1,4 +1,5 @@
 import { getDb, allMemories, projectSlugById, readMemories, Memory, projectRecord, getProjectBrief } from "../store/db";
+import { projectScopeIds } from "./scope";
 import { vecCandidates } from "../vecfind";
 import { cosine as vecCosine } from "../vecindex";
 
@@ -143,10 +144,12 @@ export function searchMemories(
   const qModel = opts.embedModel || "";
   const semCands = qEmb ? vecCandidates(qEmb, limit, qModel) : null;
 
+  // Project scope = the whole git work tree (see retrieve/scope.ts).
+  const scopeProj = opts.projectSlug ? projectRecord(opts.projectSlug) : null;
+  const scope = scopeProj ? projectScopeIds(scopeProj.id) : null;
   for (const m of memories) {
     if (opts.projectSlug) {
-      const slug = projectSlugById(m.projectId);
-      if (slug !== opts.projectSlug) continue;
+      if (scope ? m.projectId == null || !scope.has(m.projectId) : projectSlugById(m.projectId) !== opts.projectSlug) continue;
     }
     if (opts.kind && m.kind !== opts.kind) continue;
     const kw = keywordScore(m.content, query);
@@ -224,8 +227,10 @@ export function projectContext(projectSlug: string, limit = 8): SearchHit[] {
   const memories = allMemories();
   const now = Date.now();
   const hits: SearchHit[] = [];
+  const own = projectRecord(projectSlug);
+  const scope = own ? projectScopeIds(own.id) : null;
   for (const m of memories) {
-    if (projectSlugById(m.projectId) !== projectSlug) continue;
+    if (scope ? m.projectId == null || !scope.has(m.projectId) : projectSlugById(m.projectId) !== projectSlug) continue;
     // Project context = what is true now: skip superseded decisions.
     if ((m.validTo || 0) > 0) continue;
     const ageDays = (now - m.createdAt) / 86400000;
@@ -241,7 +246,7 @@ export function projectContext(projectSlug: string, limit = 8): SearchHit[] {
       importance: m.importance,
       createdAt: m.createdAt,
       sourceTool: m.sourceTool,
-      projectSlug,
+      projectSlug: projectSlugById(m.projectId) || projectSlug,
       score,
     });
   }

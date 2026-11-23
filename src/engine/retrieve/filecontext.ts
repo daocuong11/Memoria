@@ -9,6 +9,7 @@
  * need at least two matching segments, otherwise every project would match.
  * ------------------------------------------------------------------------- */
 import { getDb, resolveProject } from "../store/db";
+import { projectScopeIds } from "./scope";
 
 export interface FileContextHit {
   id: number;
@@ -62,8 +63,9 @@ export function fileContext(filePath: string, opts: { project?: string; limit?: 
   if (opts.project) {
     const proj = resolveProject(opts.project);
     if (proj) {
-      where.push("project_id = ?");
-      params.push(proj.id);
+      const ids = [...projectScopeIds(proj.id)];
+      where.push(`project_id IN (${ids.map(() => "?").join(",")})`);
+      params.push(...ids);
     }
   }
   const rows = getDb()
