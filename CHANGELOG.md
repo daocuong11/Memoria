@@ -50,6 +50,11 @@ seluruh temuan high/medium penting diperbaiki di rilis ini.
 
 ## [Unreleased]
 
+### Context cost and recall scope
+- **`scripts/audit-context.mjs`** measures what Memoria actually hands an agent, on a read-only copy of a database. On a real library (25 projects, 480 active memories): resume block median **455 tokens** (max 745), Claude Code SessionStart hook median 267, `project_context` index median 300, `build_context` median 490, `recall` hits median 165.
+- **Scoped recall follows the git repository.** One repository often became several projects (`repo`, `repo/contracts`, `repo/services/api`), and scoped `recall`, `project_context`, `build_context` and `file_context` saw only the exact folder. They now include every project in the same git work tree; nested repositories and folders outside git keep the exact scope. In the audit, project-scoped recalls with no hit went from 17/32 to 10/32 (the rest have no matching memory at all).
+- **The Claude Code hook no longer repeats CLAUDE.md.** It sends only the lines CLAUDE.md does not already contain, or a one-line pointer: on projects with a Memoria block, the duplicated part went from median 60 tokens (max 93) to 0.
+
 ### Tier 0
 - **Language noise files:** agent-chatter rules (`agent-narration`, `offer-question`, `generic-agent`) moved from regexes in `noise.ts` to one phrase list per language in `src/engine/extract/noise-lang/` (`en.json`, `id.json`). Phrases are plain words matched on whole words with case, apostrophes and commas ignored, so a new language is a data-only pull request; `tests/noise-lang.test.mjs` validates every file and its registration. Checked against the old rules on 62,328 real candidate lines (read-only): one line differs, a UI fragment ("lets talk …") now also counted as chatter. The new matching is stricter about word boundaries, so "Let measure …" is no longer dropped, and it accepts curly apostrophes ("Let’s"). `npm run eval:heuristic` is unchanged.
 
