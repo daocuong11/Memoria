@@ -8,6 +8,9 @@
  * Pola dicocokkan ke konten yang sudah dinormalisasi (spasi tunggal, trim).
  * ------------------------------------------------------------------------- */
 
+// Structural rules (shell, code, tool output) live here; agent chatter per
+// language (plain phrases, never regex) lives in noise-lang/<language>.json.
+import { languageNoiseReason } from "./noise-lang";
 export interface NoiseRule {
   id: string;
   test: (s: string) => boolean;
@@ -50,10 +53,7 @@ export const NOISE_RULES: NoiseRule[] = [
   re("bare-path", /^[`'"]?(?:[A-Za-z]:\\|[~.]{0,2}\/)?[\w.@+-]+(?:[/\\][\w.@+-]+)+[/\\]?[`'"]?\.?$|^[`'"]?[\w-]+\.(tsx?|jsx?|mjs|cjs|py|go|rs|java|md|json|ya?ml|toml|sql|css|scss|html|vue|svelte)[`'"]?$/),
   re("hex-address", /^(?:\(\d+\)\s*)?0x[0-9a-fA-F]{8,}/),
   re("bare-command", /^(?:Command:\s*)?(npm|pnpm|yarn|bun|npx|node|git|gh|python3?|pip3?|cargo|go|make|docker|kubectl|curl|ssh|ls|cd|cat|rm|mv|cp|mkdir|grep|sed|awk|find|sleep|echo|tsc|vite|next|uv)\s[^.!?]*$/),
-  // Narasi/proses agen (bukan pengetahuan proyek)
-  re("agent-narration", /^(let me|let's|now (i'?ll|i will|let me|let's|i need to|we need to)|i'?ll (now |first |start by )?(check|look|run|read|inspect|start|search|open|verify|review|examine|create|update|fix|try)|i'?m going to|next,? (i'?ll|let me)|first,? (i'?ll|let me)|okay,? (let|now|i)|alright,? |great,? (now|let)|perfect,? (now|let)|inspect(ing)? |checking |reading |looking at |searching |mari (saya|kita) |sekarang (saya|aku|kita) |oke,? (saya|aku|sekarang|kita)|baik,? (saya|sekarang)|saya akan (cek|lihat|baca|jalankan|periksa|mulai)|saya tunggu|saya (lanjut|mulai) (ke|dengan|dari)|aku (cek|lihat|baca|tunggu) )/i),
-  re("offer-question", /^(mau (saya|aku|ku|gue)|want me to|should i|shall i|do you want|would you like|apakah (kamu|anda|mau)|perlu (saya|aku)|kalau mau|if you want|if you'd like)\b/i),
-  re("generic-agent", /\b(how can i help|let me know if|feel free to|hope this helps|happy to help|semoga membantu|ada yang (lain|bisa))\b/i),
+  // Agent chatter is language-specific: see noise-lang/<language>.json.
 ];
 
 /** Rasio huruf terhadap karakter non-spasi — teks didominasi angka/simbol
@@ -75,6 +75,8 @@ export function noiseReason(raw: string): string | null {
   const s = (raw || "").replace(/\s+/g, " ").trim();
   if (s.length < 15) return "too-short";
   for (const r of NOISE_RULES) if (r.test(s)) return r.id;
+  const lang = languageNoiseReason(s);
+  if (lang) return lang;
   if (letterRatio(s) < 0.55) return "symbol-heavy";
   if (wordCount(s) < 3) return "too-few-words";
   return null;

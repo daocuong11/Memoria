@@ -43,6 +43,26 @@ session directories can hit EMFILE) and guarantees you can't corrupt a real
 - **Windows × macOS**: paths resolve per-OS in `config.ts`; never rely on
   symlinks for injection (marker-block duplication works identically on both).
 
+## Add agent-chatter phrases for your language
+Memoria drops agent chatter ("let me check…", "want me to…", "hope this
+helps") before it becomes a memory. Those phrases live in one JSON file per
+language in `src/engine/extract/noise-lang/` and are plain words, never
+regular expressions, so you do not need to know the code to add a language.
+
+1. Copy `en.json` to `<code>.json` (ISO 639-1, e.g. `es.json`, `hi.json`) and
+   set `"language"` and `"name"`.
+2. Translate the phrases. Rule ids stay the same:
+   - `agent-narration` (`"at": "start"`): the agent describing its next step.
+   - `offer-question` (`"at": "start"`): the agent offering to do more.
+   - `generic-agent` (`"at": "anywhere"`): closing pleasantries.
+3. Add one import line for your file in `noise-lang/index.ts`.
+4. Run `npm test` (`tests/noise-lang.test.mjs` checks every file) and
+   `npm run eval:heuristic`.
+
+Matching ignores case, apostrophes and commas, and works on whole words, so
+`lets` covers "Let's" and "let’s". Keep phrases short and specific: a phrase
+that also starts real decisions ("use", "we decided") would drop real memories.
+
 ## PR checklist
 
 - [ ] `npm test` green (this runs the build too)
