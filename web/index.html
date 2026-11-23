@@ -598,6 +598,26 @@
     .bars .bar { background: var(--grad); box-shadow: 0 0 12px rgba(110,141,255,.25); border-radius: 7px 7px 4px 4px; }
     .bars .bar.zero { background: var(--border); box-shadow: none; }
     .resume-dot { animation: pulse 2s infinite; }
+    /* Sync devices */
+    .dev-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border-soft); margin-bottom: 6px; }
+    .dev-row.revoked { opacity: .6; }
+    .dev-main { flex: 1; min-width: 0; }
+    .dev-name { font-size: 13px; color: var(--text); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .dev-id { font-family: var(--mono); font-size: 11px; color: var(--faint); }
+    .dev-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+    .dev-tag { font-size: 10.5px; padding: 1px 7px; border-radius: 20px; border: 1px solid var(--border); color: var(--muted); }
+    .dev-tag.self { color: var(--green); border-color: color-mix(in srgb, var(--green) 40%, transparent); }
+    .dev-tag.rev { color: var(--red); border-color: color-mix(in srgb, var(--red) 40%, transparent); }
+    .btn.danger { color: var(--red); border-color: color-mix(in srgb, var(--red) 35%, var(--border)); }
+    .btn.danger:hover { background: color-mix(in srgb, var(--red) 10%, transparent); }
+    dialog.sync-dlg { margin: auto; max-width: 460px; width: calc(100% - 32px); background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px; }
+    dialog.sync-dlg::backdrop { background: rgba(0,0,0,.55); }
+    dialog.sync-dlg h3 { font-size: 16px; margin-bottom: 6px; }
+    dialog.sync-dlg p { font-size: 13px; color: var(--muted); line-height: 1.5; margin: 6px 0; }
+    dialog.sync-dlg input { width: 100%; margin-top: 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; color: var(--text); font-size: 13px; }
+    dialog.sync-dlg .code { margin-top: 8px; user-select: all; word-break: break-all; }
+    dialog.sync-dlg .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+    dialog.sync-dlg .dlg-err { color: var(--red); font-size: 12.5px; margin-top: 8px; min-height: 1em; }
     /* Learning journal card */
     .jr-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
     .jr-range { font-size: 11.5px; color: var(--faint); }
@@ -1580,6 +1600,14 @@
               <div class="kv"><span class="k" data-i18n="Conflicts">Conflicts</span><span class="v" id="syncKvConflicts">—</span></div>
               <div class="kv"><span class="k" data-i18n="Embed queue">Embed queue</span><span class="v" id="syncKvEmbed">—</span></div>
               <div class="card-desc" style="margin-top:10px" data-i18n-html="Setup and manual export/import use the CLI: <code>memoria sync setup|export|import</code>. If the key is locked (passphrase), folder actions may require CLI.">Setup and manual export/import use the CLI: <code>memoria sync setup|export|import</code>. If the key is locked (passphrase), folder actions may require CLI.</div>
+            </div>
+            <div class="card" id="syncDevicesCard">
+              <div class="jr-head">
+                <h4 data-i18n="Devices">Devices</h4>
+                <button class="btn" id="btnSyncRotate" data-i18n="Rotate key">Rotate key</button>
+              </div>
+              <div class="card-desc" data-i18n="Devices whose bundles were applied here. Revoking a device rotates the group key: every device you keep rejoins with the new recovery code.">Devices whose bundles were applied here. Revoking a device rotates the group key: every device you keep rejoins with the new recovery code.</div>
+              <div id="syncDevices" style="margin-top:10px"></div>
             </div>
             <div class="card">
               <h4 data-i18n="Shared folder sync">Shared folder sync</h4>

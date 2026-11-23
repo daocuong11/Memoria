@@ -1024,6 +1024,29 @@ export function startHttpServer(): Promise<void> {
           folder = null;
         }
         sendJson(res, 200, { status, folder });
+      } else if (url.pathname === "/api/sync/devices" && req.method === "GET") {
+        const { listDevices, isSyncConfigured } = await import("./sync/keys");
+        sendJson(res, 200, { configured: isSyncConfigured(), devices: listDevices() });
+      } else if ((url.pathname === "/api/sync/rotate" || url.pathname === "/api/sync/revoke") && req.method === "POST") {
+        // Destructive: every other device must rejoin with the new recovery
+        // code. The dashboard sends confirm:true only after an explicit dialog.
+        const body = await readBody(req);
+        if (body.confirm !== true) {
+          sendJson(res, 400, { ok: false, error: "confirm: true is required" });
+          return;
+        }
+        const revoke = url.pathname === "/api/sync/revoke" ? String(body.deviceId || "").trim() : undefined;
+        if (revoke === "") {
+          sendJson(res, 400, { ok: false, error: "deviceId is required" });
+          return;
+        }
+        const { rotateAndRepublish } = await import("./sync/folder");
+        try {
+          const passphrase = typeof body.passphrase === "string" && body.passphrase ? body.passphrase : undefined;
+          sendJson(res, 200, { ok: true, ...rotateAndRepublish({ passphrase, revoke }) });
+        } catch (e) {
+          sendJson(res, 400, { ok: false, error: String((e as Error).message || e) });
+        }
       } else if (url.pathname === "/api/sync/conflicts" && req.method === "GET") {
         const { listRecentConflicts } = await import("./sync/folder");
         const limit = Math.min(200, Math.max(1, Number(url.searchParams.get("limit") || 50) || 50));

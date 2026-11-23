@@ -197,7 +197,7 @@ function setView(name) {
   if (name === "graph") renderGraph();
   if (name === "tasks") renderTasks();
   if (name === "integrations") renderIntegrations();
-  if (name === "settings") { renderSettings(); loadSettingsToggles(); loadBackups(); loadSyncStatus(); }
+  if (name === "settings") { renderSettings(); loadSettingsToggles(); loadBackups(); loadSyncStatus(); loadSyncDevices(); }
 }
 
 /* Kartu Overview: berapa konteks yang dikirim ke agen dan berapa yang dihemat
@@ -2588,6 +2588,101 @@ async function loadSyncStatus() {
   }
 }
 
+/* Settings → Sync → Devices: list, rotate the group key, revoke a device. */
+let syncStorage = "";
+async function loadSyncDevices() {
+  const box = document.getElementById("syncDevices");
+  const rot = document.getElementById("btnSyncRotate");
+  if (!box) return;
+  try {
+    const [d, st] = await Promise.all([api("/api/sync/devices"), api("/api/sync/status")]);
+    syncStorage = (st.status && st.status.storage) || "";
+    if (rot) rot.disabled = !d.configured;
+    if (!d.configured) {
+      box.innerHTML = `<div class="card-desc">${esc(t("Set up sync first: memoria sync setup"))}</div>`;
+      return;
+    }
+    const devs = (d.devices || []).slice().sort((a, b) => Number(b.self) - Number(a.self) || Number(a.revoked) - Number(b.revoked) || b.lastBundleAt - a.lastBundleAt);
+    box.innerHTML = devs.map((dev) => {
+      const tags = (dev.self ? `<span class="dev-tag self">${esc(t("this device"))}</span>` : "") + (dev.revoked ? `<span class="dev-tag rev">${esc(t("revoked"))}</span>` : "");
+      const sub = dev.self
+        ? t("Your current device")
+        : dev.lastBundleAt ? (dev.bundles === 1 ? t("Last bundle {0} · 1 bundle", fmtRel(dev.lastBundleAt)) : t("Last bundle {0} · {1} bundles", fmtRel(dev.lastBundleAt), dev.bundles)) : t("No bundles applied yet");
+      const action = !dev.self && !dev.revoked
+        ? `<button class="btn danger" data-revoke="${esc(dev.deviceId)}" data-name="${esc(dev.name || dev.deviceId.slice(0, 8))}">${esc(t("Revoke"))}</button>`
+        : "";
+      return `<div class="dev-row ${dev.revoked ? "revoked" : ""}">
+        <div class="dev-main">
+          <div class="dev-name">${esc(dev.name || t("Unnamed device"))} <span class="dev-id">${esc(dev.deviceId.slice(0, 8))}</span> ${tags}</div>
+          <div class="dev-sub">${esc(sub)}</div>
+        </div>${action}
+      </div>`;
+    }).join("");
+    if (devs.length === 1) box.insertAdjacentHTML("beforeend", `<div class="card-desc">${esc(t("Other devices appear here after their first bundle is applied."))}</div>`);
+    box.querySelectorAll("[data-revoke]").forEach((b) => b.addEventListener("click", () => syncKeyDialog({ revoke: b.dataset.revoke, name: b.dataset.name })));
+  } catch (e) {
+    box.innerHTML = `<div class="card-desc">${esc(t("Failed to load devices"))}</div>`;
+  }
+}
+/* Confirm → (passphrase) → run → show the new recovery code once. */
+function syncKeyDialog(opts = {}) {
+  const dlg = document.createElement("dialog");
+  dlg.className = "sync-dlg";
+  const revoking = !!opts.revoke;
+  const needsPass = syncStorage === "passphrase";
+  dlg.innerHTML = `
+    <h3>${esc(revoking ? t("Revoke {0}?", opts.name) : t("Rotate the sync key?"))}</h3>
+    <p>${esc(revoking
+      ? t("This device can no longer read new bundles. Memoria creates a new group key, and every device you keep must rejoin with the new recovery code.")
+      : t("Memoria creates a new group key. Every other device must rejoin with the new recovery code before it can sync again."))}</p>
+    ${needsPass ? `<label class="t-label" for="dlgPass">${esc(t("Sync passphrase"))}</label><input type="password" id="dlgPass" autocomplete="current-password">` : ""}
+    <div class="dlg-err" id="dlgErr" role="alert"></div>
+    <div class="dlg-actions">
+      <button class="btn" id="dlgCancel">${esc(t("Cancel"))}</button>
+      <button class="btn ${revoking ? "danger" : "primary"}" id="dlgGo">${esc(revoking ? t("Revoke and rotate") : t("Rotate key"))}</button>
+    </div>`;
+  document.body.appendChild(dlg);
+  const close = () => { dlg.close(); dlg.remove(); };
+  dlg.addEventListener("cancel", (e) => { e.preventDefault(); close(); });
+  dlg.querySelector("#dlgCancel").addEventListener("click", close);
+  dlg.querySelector("#dlgGo").addEventListener("click", async (ev) => {
+    const go = ev.currentTarget;
+    const pass = dlg.querySelector("#dlgPass")?.value || "";
+    if (needsPass && !pass) { dlg.querySelector("#dlgErr").textContent = t("Enter the passphrase."); return; }
+    go.disabled = true;
+    try {
+      const r = await api(revoking ? "/api/sync/revoke" : "/api/sync/rotate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: true, deviceId: opts.revoke, passphrase: pass || undefined }),
+      });
+      if (!r.ok) throw new Error(r.error || "failed");
+      const cmd = `memoria sync setup --join ${r.recoveryCode} --force`;
+      dlg.innerHTML = `
+        <h3>${esc(t("New recovery code"))}</h3>
+        <p>${esc(t("Run this on every device you keep. It is shown once; store it like a password."))}</p>
+        <div class="code" id="dlgCode">${esc(cmd)}</div>
+        <p>${esc(r.republished ? t("All memories were re-exported to the shared folder under the new key ({0} changes).", r.republished.opCount) : r.republishError ? t("The key was rotated, but the re-export failed: {0}", r.republishError) : t("No shared folder: run memoria sync export --full and import it on the other devices."))}</p>
+        <div class="dlg-actions">
+          <button class="btn" id="dlgCopy">${esc(t("Copy command"))}</button>
+          <button class="btn primary" id="dlgDone">${esc(t("Done"))}</button>
+        </div>`;
+      dlg.querySelector("#dlgCopy").addEventListener("click", async () => {
+        try { await navigator.clipboard.writeText(cmd); toast(t("Copied")); } catch { toast(t("Copy failed"), "err"); }
+      });
+      dlg.querySelector("#dlgDone").addEventListener("click", close);
+      toast(revoking ? t("Device revoked, key rotated") : t("Sync key rotated"));
+      loadSyncDevices();
+      loadSyncStatus();
+    } catch (e) {
+      go.disabled = false;
+      dlg.querySelector("#dlgErr").textContent = String(e.message || e);
+    }
+  });
+  dlg.showModal();
+  (dlg.querySelector("#dlgPass") || dlg.querySelector("#dlgCancel")).focus();
+}
+document.getElementById("btnSyncRotate")?.addEventListener("click", () => syncKeyDialog());
 async function loadSyncConflicts() {
   const box = document.getElementById("syncConflictsBox");
   if (!box) return;
@@ -2651,7 +2746,7 @@ function wireSettingsTabs() {
       localStorage.setItem("memoria_settab", tab);
       nav.querySelectorAll(".stab").forEach((x) => x.classList.toggle("active", x === btn));
       document.querySelectorAll(".settings-group").forEach((g) => g.classList.toggle("active", g.dataset.stab === tab));
-      if (tab === "sync") { wireSyncSettings(); loadSyncStatus(); loadSyncConflicts(); }
+      if (tab === "sync") { wireSyncSettings(); loadSyncStatus(); loadSyncConflicts(); loadSyncDevices(); }
     });
   });
   const saved = localStorage.getItem("memoria_settab") || "sources";

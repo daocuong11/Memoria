@@ -333,3 +333,42 @@ export function stopFolderWatcher(): void {
 }
 
 export { listRecentConflicts };
+
+export interface RotateOutcome {
+  groupId: string;
+  previousGroupId: string;
+  recoveryCode: string;
+  revokedDeviceId?: string;
+  /** Full export under the new key, when a shared folder is available. */
+  republished: { filePath: string; opCount: number } | null;
+  /** Set when the republish failed; the rotation itself succeeded. */
+  republishError?: string;
+}
+/** Rotate the group key (optionally revoking a device first) and republish
+ * everything under the new key, so the devices that rejoin catch up. Shared
+ * by the CLI and the dashboard. */
+export function rotateAndRepublish(opts: { passphrase?: string; revoke?: string } = {}): RotateOutcome {
+  const { rotateGroupKey, revokeDevice } = require("./keys") as typeof import("./keys");
+  const r = opts.revoke !== undefined ? revokeDevice(opts.revoke, { passphrase: opts.passphrase }) : rotateGroupKey({ passphrase: opts.passphrase });
+  // The key has already changed here: a failed republish must never hide the
+  // new recovery code, so it is reported instead of thrown.
+  let republished: RotateOutcome["republished"] = null;
+  let republishError: string | undefined;
+  try {
+    const st = getFolderStatus();
+    if (st.path && st.available) {
+      const res = exportPendingToFolder({ passphrase: opts.passphrase, force: true, full: true });
+      if (res.exported && res.filePath) republished = { filePath: res.filePath, opCount: res.opCount || 0 };
+    }
+  } catch (e) {
+    republishError = e instanceof Error ? e.message : String(e);
+  }
+  return {
+    groupId: r.groupId,
+    previousGroupId: r.previousGroupId,
+    recoveryCode: r.recoveryCode,
+    ...("deviceId" in r ? { revokedDeviceId: (r as { deviceId: string }).deviceId } : {}),
+    republished,
+    ...(republishError ? { republishError } : {}),
+  };
+}
