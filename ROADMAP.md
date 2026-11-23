@@ -5,72 +5,39 @@
 
 ---
 
-## ⏭️ POSI TERKINI (2026-11-16) — untuk melanjutkan kerja
+## ⏭ POSISI TERKINI (2026-11-23) — untuk melanjutkan kerja
+**Rilis terbaru: v0.16.3** (npm, MCP Registry, GitHub Releases, Glama, mcprush;
+landing https://memoria.xinzzu.web.id). Fase F0–F3, F1C, sync M1–M5, Tier 0
+(auto-triage tanpa approval manual), team brain, dan distribusi selesai. Detail
+per rilis ada di `CHANGELOG.md`; riwayat fase lama di bawah tetap sebagai konteks.
 
-**Selesai & ter-push (main):** F0 ✅ · F1A ✅ (acceptance 12/12) · F1B ✅ (smoke 6/6) ·
-**F1C ✅ (2026-11-11, `feat/f1c-retrieval-scale`)**: FTS5 keyword search (trigram, rerank
-keywordScore, fallback legacy untuk recall typo) · embedding Float32 BLOB (migrasi
-`user_version` v2 otomatis) · dedupe kandidat via SQL · pagination `/api/memories/list` &
-`/api/memories/tag` + "Load more" di semua tab Memories · event delegation (tanpa re-bind
-O(n)) · `content-visibility` menggantikan virtualisasi JS (tinggi baris variabel aman).
-Acceptance F1C: 5.000 memori sintetis → search median 5,4–58,0 ms, semua < 100 ms
-(`scripts/bench-f1c.mjs`). · F2 ✅ (v0.5.0): Tasks view, engine EN, safeStorage, batch
-embedding, setup checklist, settings two-pane, graph obsidian + 3D, i18n penuh, light
-theme, SSE live, test suite, project detail view.
+**Backlog eksekusi (urut):**
+1. **Jurnal belajar mingguan** — pasangan error→fix per minggu (error apa,
+   perbaikannya, mana yang berulang), di atas `summary/weekly.ts`; dashboard +
+   digest mingguan.
+2. **Tombol Sync di dashboard** — Settings → Sync: daftar perangkat, rotate key,
+   revoke perangkat (CLI `sync devices|rotate|revoke` sudah ada).
+3. **Aturan noise per bahasa** — `NOISE_RULES` dipindah ke file data (`id`, `en`)
+   yang bisa ditambah komunitas.
+4. **Refactor** `store/db.ts`, `http.ts`, `web/app.js` per modul, semua test hijau.
+5. **i18n dashboard multi-bahasa** (kamus per bahasa, bukan hanya EN/ID) +
+   bagian Contributors di README.
+6. Rilis **v0.17.0** (bukan 0.16.x: Glama sudah memakai label 0.16.4).
+7. **Homebrew tap + winget** — menunggu izin pemilik (repo publik eksternal).
+8. **Code signing** macOS/Windows — menunggu keputusan biaya.
 
-**Sync M1 ✅ (PR #8) + M2 ✅ + M3 ✅ + M4 ✅:** migrasi v3/v4/v5
-(UID stabil + `updated_by`, outbox/HLC, entity clock, tombstone, conflict/seen-op
-ledger, embed queue, project alias, applied-bundle ledger), CLI `memoria sync
-setup|status|export|import|folder set|folder status|conflicts`
-(`--full`/`--join`/`--passphrase`/`--embed`/`--clear`), recovery code + group key
-(safeStorage/passphrase scrypt), bundle `.memsync` terenkripsi AES-256-GCM/HKDF
-dengan header AAD, apply idempoten + LWW/tombstone + relay full export + project
-alias (slug/path lokal tidak disinkronkan), embedding backfill lokal, guard
-`sync.groupKey` di `/api/settings`, shared-folder watcher + atomic/debounced
-export + scan/apply idempoten + cleanup bundle sendiri, dan Settings **Sync**
-(status/folder/conflict UI + API lokal) + README/i18n. Test suite kini **72
-kasus**. Berikutnya **M5**: hardening (rotasi/revokasi kunci, proteksi, performa).
+**Belum diuji di kondisi nyata:** parser Cursor Composer, keychain Linux/Windows,
+hook Claude Code di sesi live, import zip ChatGPT/Claude asli, Obsidian, build
+Mac Intel. Issue #65 dan #67 meminta bantuan komunitas.
 
-**Heuristic/no-AI maximization (2026-11-16, in progress/branch):** ekstraksi aturan
-lebih kaya (kalimat/list-checkbox/TODO, sinyal kode/path/cmd/error, ID/EN) +
-confidence/signal; sinyal kuat (task/decision/error-fix/fakta ber-entitas)
-auto-promoted ke `active` dengan `origin:'heuristic'` (dibatasi per sesi) agar
-resume/recall/link lintas-AI instan saat limit-hopping, sisanya draft. Snapshot
-deterministik aktif, dedupe/link mencakup draft heuristik, task lifecycle menutup
-draft heuristik, dan handoff/resume punya fallback deterministik (draft/snapshot/
-transkrip). Backfill data lama & upgrade embedding: `maintain
-heuristic-promote|reembed|consolidate|all` + promosi sekali-jalan saat startup.
-Sumber capture Windsurf diaktifkan default. E2E terisolasi (heuristik, tanpa
-model) lolos: ekstrak+snapshot+resume lintas sesi/tool.
+**Menunggu pihak luar:** PR awesome-mcp-servers #20035, up-for-grabs #6471.
+Issue `good first issue` terbuka: #66, #68, #79, #81, #82.
 
-**Tier 0 maximization (2026-11-17, branch `feat/tier0-max`):** draft heuristik
-tidak lagi butuh approval manual — auto-triage (`extract/triage.ts`) memutuskan
-active/archive/draft dengan alasan tercatat, undo per batch, TTL draft 14 hari,
-jalan saat startup + harian. Filter noise berbasis tabel (`extract/noise.ts`),
-skor `triageCandidate`, corroboration lintas sesi/tool, inbox berkelompok +
-pratinjau/undo di dashboard. Diukur di salinan DB nyata: 4.153 draft → 3.
-Juga: bug seq capture (pesan hilang) + migrasi v9 pemulihan, `tool_result` →
-role `tool`, redaksi secret + migrasi v8, `decryptSecret` diperbaiki, Origin
-asing ditolak untuk semua method, `bin`/`help` untuk `npx`. Test **84 kasus**;
-`npm run eval:heuristic` (set berlabel) menjaga kualitas.
-
-**Backlog eksekusi berikutnya (urut):**
-1. Merge & rilis `feat/tier0-max`; jalankan app pada DB nyata (migrasi v8/v9
-   otomatis + auto-triage startup) dan cek scan pemulihan + Undo triage di
-   dashboard. Publish npm (`npx memoria server`) — nama paket perlu dicek.
-2. **Sync M1 ✅ → M2 ✅ → M3 ✅ → M4 ✅ →
-   M5 hardening** (desain: `docs/sync-design.md`). Code signing/notarization masih
-   menunggu keputusan biaya (Apple Developer + cert Windows).
-3. Rilis berikutnya menunggu sync M5 atau code signing.
-
-**Catatan lingkungan:** server live jalan via `nohup node dist/engine/index.js server` (port 48210,
-data asli ~/.memoria, 17.8k transkrip; backlog ekstraksi qwen berjalan bertahap di background).
-Untuk pengujian terisolasi pakai `MEMORIA_DATA_DIR=$(mktemp -d) node dist/engine/index.js server`
-(JANGAN migrasi DB asli di luar app). Static asset HTML/JS/CSS = no-cache; gambar cache 1 jam.
-`npm run check:ui` = audit selector + struktur. `node scripts/bench-f1c.mjs` = benchmark search.
-
+**Catatan lingkungan:** pengujian selalu terisolasi
+(`HOME=$(mktemp -d) MEMORIA_DATA_DIR=$(mktemp -d)`); DB asli `~/.memoria` hanya
+dipakai app. `npm run check:ui` = audit selector + struktur;
+`node scripts/bench-f1c.mjs` = benchmark search.
 ---
-
 ## 0. Ringkasan Eksekutif
 
 Memoria = second brain offline untuk semua AI coding tool. Rencana ini menyatukan:
