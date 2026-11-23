@@ -226,29 +226,62 @@ async function loadUsage() {
   }
 }
 
-/* Kartu Overview: jurnal belajar mingguan (pasangan error→fix, berulang dulu). */
+/* Overview card: weekly learning journal. Recurring fixes get the space,
+ * new ones a compact line; each row opens the memory. */
 async function loadJournal() {
   const body = document.getElementById("journalBody");
   if (!body) return;
+  let j;
   try {
-    const j = await api("/api/journal?days=7");
-    if (!j.entries || !j.entries.length) {
-      body.textContent = t("No fixed errors this week.");
-      return;
-    }
-    const head = `<div style="margin-bottom:6px">${esc(t("{0} fixed, {1} recurring", j.fixes, j.recurring.length))}</div>`;
-    const rows = j.entries.slice(0, 6).map((e) => {
-      const n = e.timesThisWeek + e.timesBefore;
-      const tag = e.recurring ? `<span class="chip" style="margin-right:6px; color:var(--amber, #d9a05b)">${esc(t("recurring ×{0}", n))}</span>` : "";
-      return `<div style="padding:4px 0; border-top:1px solid var(--border)">${tag}${esc(e.content)} <span class="muted">· ${esc(e.project)}</span></div>`;
-    }).join("");
-    const files = (j.topFiles || []).length
-      ? `<div style="margin-top:6px">${esc(t("Files that keep breaking"))}: ${j.topFiles.slice(0, 4).map((f) => `<code>${esc(f.file)}</code> (${f.count})`).join(", ")}</div>`
-      : "";
-    body.innerHTML = head + rows + files;
+    j = await api("/api/journal?days=7");
   } catch {
     body.textContent = "";
+    return;
   }
+  const entries = j.entries || [];
+  if (!entries.length) {
+    body.innerHTML = `<div class="jr-empty"><b>${esc(t("No fixed errors this week."))}</b><span>${esc(t("When a session fixes an error, it lands here. Errors that come back are listed first."))}</span></div>`;
+    return;
+  }
+  const rec = entries.filter((e) => e.recurring);
+  const fresh = entries.filter((e) => !e.recurring);
+  const diff = j.fixes - (j.previousFixes || 0);
+  const trend = diff === 0 ? t("same as last week") : t("{0} vs last week", (diff > 0 ? "+" : "−") + Math.abs(diff));
+  const stat = (n, label, cls = "") =>
+    `<div class="jr-stat ${cls}"><b>${n}</b><span>${esc(label)}${cls === "fx" ? `<span class="jr-trend" title="${esc(t("Compared with the 7 days before"))}">· ${esc(trend)}</span>` : ""}</span></div>`;
+  const files = (e) => (e.files || []).slice(0, 2).map((f) => `<span class="jr-file">${esc(f.split("/").slice(-2).join("/"))}</span>`).join("");
+  const recRow = (e) => {
+    const n = e.timesThisWeek + e.timesBefore;
+    const when = e.timesBefore ? t("also fixed {0}× before", e.timesBefore) : t("{0}× this week", e.timesThisWeek);
+    return `<div class="jr-item rec" tabindex="0" role="button" data-jr="${e.id}">
+      <div class="jr-body">
+        <div class="jr-text">${esc(e.content)}</div>
+        <div class="jr-meta"><span>${esc(e.project)}</span><span>·</span><span>${esc(when)}</span>${files(e)}</div>
+      </div>
+      <div class="jr-count" title="${esc(t("Times fixed"))}">${n}×</div>
+    </div>`;
+  };
+  const newRow = (e) => `<div class="jr-new" tabindex="0" role="button" data-jr="${e.id}">
+      <span class="jr-dot"></span><span class="jr-one">${esc(e.content)}</span><span class="jr-when">${esc(fmtRel(e.createdAt))}</span>
+    </div>`;
+  const NEW_SHOWN = 3;
+  let html = `<div class="jr-stats">${stat(j.fixes, t("fixed"), "fx")}${stat(rec.length, t("keep coming back"), "rec")}${stat(fresh.length, t("new"))}</div>`;
+  if (rec.length) html += `<div class="jr-label">${esc(t("Keeps coming back"))}</div>` + rec.slice(0, 3).map(recRow).join("");
+  if (fresh.length) {
+    html += `<div class="jr-label" style="margin-top:10px">${esc(t("New this week"))}</div>` + fresh.slice(0, NEW_SHOWN).map(newRow).join("");
+    if (fresh.length > NEW_SHOWN) html += `<button class="jr-more" id="jrMore">${esc(t("Show {0} more", fresh.length - NEW_SHOWN))}</button>`;
+  }
+  body.innerHTML = html;
+  const open = (el) => openEditModal(Number(el.dataset.jr));
+  body.querySelectorAll("[data-jr]").forEach((el) => {
+    el.addEventListener("click", () => open(el));
+    el.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); open(el); } });
+  });
+  body.querySelector("#jrMore")?.addEventListener("click", (ev) => {
+    ev.currentTarget.insertAdjacentHTML("beforebegin", fresh.slice(NEW_SHOWN).map(newRow).join(""));
+    ev.currentTarget.remove();
+    body.querySelectorAll(".jr-new[data-jr]").forEach((el) => { el.onclick = () => open(el); });
+  });
 }
 async function loadStats() {
   loadUsage();

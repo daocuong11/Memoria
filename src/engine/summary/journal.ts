@@ -33,6 +33,8 @@ export interface LearningJournal {
   until: number;
   days: number;
   fixes: number;
+  /** Fixed errors in the period of the same length right before this one. */
+  previousFixes: number;
   entries: JournalEntry[];
   recurring: JournalEntry[];
   topFiles: Array<{ file: string; count: number }>;
@@ -64,6 +66,7 @@ export function learningJournal(opts: { days?: number; now?: number; project?: n
   const all = readMemories(`WHERE ${where.join(" AND ")} ORDER BY created_at DESC`, params);
   const inWindow = all.filter((m) => (m.createdAt || 0) >= since);
   const before = all.filter((m) => (m.createdAt || 0) < since);
+  const previousFixes = before.filter((m) => (m.createdAt || 0) >= since - days * DAY_MS).length;
 
   // Greedy grouping, newest first: each fix joins the first group it resembles.
   const groups: Array<typeof inWindow> = [];
@@ -126,5 +129,5 @@ export function learningJournal(opts: { days?: number; now?: number; project?: n
       for (const f of topFiles) lines.push(`- \`${f.file}\`: ${f.count} fixes`);
     }
   }
-  return { since, until, days, fixes: inWindow.length, entries, recurring, topFiles, perProject, markdown: lines.join("\n") };
+  return { since, until, days, fixes: inWindow.length, previousFixes, entries, recurring, topFiles, perProject, markdown: lines.join("\n") };
 }
