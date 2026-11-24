@@ -36,6 +36,10 @@ interface ResumeData {
   git: GitStatus | null;
   lastMessages: Array<{ role: string; content: string }>;
   snapshot?: string;
+  /** Session title (Claude Code ai-title / OpenCode session title). */
+  title?: string;
+  /** The agent's last turn report (working memory), if still current. */
+  report?: string;
 }
 
 function normResume(s: string): string {
@@ -59,7 +63,7 @@ function deriveResumeFromTranscripts(projectId: number): { tasks: Array<{ conten
   const db = getDb();
   const rows = db
     .prepare(
-      `SELECT role, content FROM transcripts WHERE project_id = ? ORDER BY ts DESC, seq DESC LIMIT 40`
+      `SELECT role, content FROM transcripts WHERE project_id = ? AND role IN ('user', 'assistant') ORDER BY ts DESC, seq DESC LIMIT 40`
     )
     .all(projectId) as Array<{ role: string; content: string }>;
   const tasks: Array<{ content: string; importance: number }> = [];
@@ -111,10 +115,10 @@ export async function collectResumeData(slug: string, opts: { slim?: boolean } =
     .prepare(
       `SELECT content, importance FROM memories
        WHERE project_id = ? AND kind = 'task_pending' AND archived = 0 AND status = 'active'
-         AND COALESCE(resolved_at, 0) = 0
-       ORDER BY created_at DESC LIMIT ${maxTasks}`
+         AND COALESCE(resolved_at, 0) = 0 AND (COALESCE(expires_at, 0) = 0 OR expires_at > ?)
+       ORDER BY (COALESCE(source_event_id, 0) > 0) DESC, created_at DESC LIMIT ${maxTasks}`
     )
-    .all(proj.id) as Array<{ content: string; importance: number }>;
+    .all(proj.id, Date.now()) as Array<{ content: string; importance: number }>;
 
   const decisions = db
     .prepare(
@@ -161,17 +165,38 @@ export async function collectResumeData(slug: string, opts: { slim?: boolean } =
     if (snap?.content) snapshot = snap.content;
   } catch { /* ignore */ }
 
-  const lastMessages = lastSession
-    ? (
-        db
-          .prepare(
-            `SELECT role, content FROM transcripts
-             WHERE project_id = ? AND session_id = ?
-             ORDER BY ts DESC, seq DESC LIMIT ${maxMsgs}`
-          )
-          .all(proj.id, lastSession.sid) as Array<{ role: string; content: string }>
-      ).reverse()
-    : [];
+  // The agent's last turn report says what was done in far fewer tokens than
+  // raw messages; raw messages are the fallback (never tool output).
+  let report: string | undefined;
+  let title: string | undefined;
+  try {
+    const r = db
+      .prepare(
+        `SELECT content FROM memories WHERE project_id = ? AND kind = 'context' AND memory_class = 'working'
+           AND archived = 0 AND (COALESCE(expires_at, 0) = 0 OR expires_at > ?)
+         ORDER BY created_at DESC LIMIT 1`
+      )
+      .get(proj.id, Date.now()) as { content: string } | undefined;
+    report = r?.content;
+    const t = db
+      .prepare(`SELECT payload FROM session_events WHERE project_id = ? AND type = 'title' ORDER BY ts DESC, id DESC LIMIT 1`)
+      .get(proj.id) as { payload: string } | undefined;
+    if (t) title = String(JSON.parse(t.payload).title || "") || undefined;
+  } catch {
+    /* before migration v13 */
+  }
+  const lastMessages =
+    lastSession && !report
+      ? (
+          db
+            .prepare(
+              `SELECT role, content FROM transcripts
+               WHERE project_id = ? AND session_id = ? AND role IN ('user', 'assistant')
+               ORDER BY ts DESC, seq DESC LIMIT ${maxMsgs}`
+            )
+            .all(proj.id, lastSession.sid) as Array<{ role: string; content: string }>
+        ).reverse()
+      : [];
 
   const git = proj.path && fs.existsSync(proj.path) ? await runGitStatus(proj.path) : null;
 
@@ -183,6 +208,8 @@ export async function collectResumeData(slug: string, opts: { slim?: boolean } =
     git,
     lastMessages,
     snapshot,
+    title,
+    report,
   };
 }
 
@@ -196,16 +223,17 @@ function shortText(s: string, max = 140): string {
 
 /** Lines for the "## SESSION RESUME" section — empty when there is no data at all. */
 export function resumeSectionLines(d: ResumeData): string[] {
-  const hasAny = d.lastTool || d.tasks.length || d.decisions.length || (d.git?.dirty.length ?? 0) || !!d.snapshot;
+  const hasAny = d.lastTool || d.tasks.length || d.decisions.length || (d.git?.dirty.length ?? 0) || !!d.snapshot || !!d.report;
   if (!hasAny) return [];
   const lines: string[] = [];
   const head = [
     "## SESSION RESUME",
     `> ${d.lastTool ?? "tool tidak diketahui"}${d.lastTs ? ` · ${hhmm(d.lastTs)}` : ""}${
       d.git?.branch ? ` · branch: ${d.git.branch}` : ""
-    }`,
+    }${d.title ? ` · "${shortText(d.title, 80)}"` : ""}`,
   ];
   lines.push(...head);
+  if (d.report) lines.push("", `**Last turn:** ${shortText(d.report, 320)}`);
   if (d.tasks.length) {
     lines.push("", "**Open tasks:**");
     for (const t of d.tasks) lines.push(`- [ ] ${shortText(t.content, 160)}`);
@@ -218,7 +246,7 @@ export function resumeSectionLines(d: ResumeData): string[] {
     const extra = Math.max(0, d.git.dirty.length - 8);
     lines.push("", `**Dirty files (git):** ${d.git.dirty.slice(0, 8).join(", ")}${extra > 0 ? ` (+${extra} lainnya)` : ""}`);
   }
-  if (d.snapshot) {
+  if (d.snapshot && !d.report) {
     lines.push("", `**Latest snapshot:** ${shortText(d.snapshot.replace(/^Work snapshot[^:]*:?\s*/i, ""), 200)}`);
   }
   if (d.lastMessages.length) {
@@ -274,15 +302,20 @@ export async function generateHandoff(slug: string, opts: HandoffOptions = {}): 
   lines.push(`> Generated by Memoria — ${new Date().toISOString().slice(0, 16)}`);
 
   // Resume block at the VERY TOP: the first part an agent reads when a new session opens.
+  // Lines already in the resume section are not repeated in the memory list.
+  const inResume = new Set<string>();
   try {
     const resume = await collectResumeData(slug, { slim: !!opts.slim });
+    for (const x of [...(resume?.tasks || []), ...(resume?.decisions || [])]) inResume.add(normResume(x.content));
     const resumeLines = resume ? resumeSectionLines(resume) : [];
     if (resumeLines.length) lines.push("", ...resumeLines);
   } catch {
     // resume section is best-effort — never block the main handoff
   }
 
-  const memories = allMemories().filter((m) => m.projectId === proj.id);
+  // Turn reports are short-lived resume context: the latest one is already
+  // in the resume section, older ones would only repeat it at ~150 tokens each.
+  const memories = allMemories().filter((m) => m.projectId === proj.id && m.memoryClass !== "working");
   lines.push("", `## Memories (${memories.length})`);
   if (!memories.length) {
     lines.push("No memories for this project yet.");
@@ -294,16 +327,21 @@ export async function generateHandoff(slug: string, opts: HandoffOptions = {}): 
       buckets.get(m.kind)!.push(m);
     }
     let total = 0;
-    const maxTotal = opts.slim ? 12 : 50;
+    const maxTotal = opts.slim ? 10 : 50;
     for (const kind of order) {
       if (total >= maxTotal) break;
       const items = buckets.get(kind);
       if (!items?.length) continue;
       lines.push("", `### ${KIND_LABEL[kind] || kind}`);
-      const sorted = items.sort((a, b) => b.importance - a.importance);
+      const sorted = items.filter((m) => !opts.slim || !inResume.has(normResume(m.content))).sort((a, b) => b.importance - a.importance);
+      if (!sorted.length) {
+        lines.splice(-2, 2); // drop the empty section heading
+        continue;
+      }
       const take = opts.slim ? Math.max(1, Math.ceil((maxTotal - total) / (order.length - order.indexOf(kind)))) : sorted.length;
       for (const it of sorted.slice(0, take)) {
-        lines.push(`- [${(it.importance * 100).toFixed(0)}] ${it.content}`);
+        // The injected block (slim) keeps each line short; the full handoff keeps the text.
+        lines.push(`- [${(it.importance * 100).toFixed(0)}] ${opts.slim ? shortText(it.content, 200) : it.content}`);
         total++;
         if (total >= maxTotal) break;
       }
