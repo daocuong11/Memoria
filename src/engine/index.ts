@@ -338,6 +338,11 @@ async function main(): Promise<void> {
       const db = getDb();
       const perTool = db.prepare("SELECT tool, COUNT(*) AS c FROM transcripts GROUP BY tool").all() as Array<{ tool: string; c: number }>;
       for (const t of perTool) console.log(`  - ${t.tool}: ${t.c}`);
+      const { captureHealth } = await import("./ingest/health");
+      console.log("Capture health:");
+      const day = (t: number) => (t ? new Date(t).toISOString().slice(0, 10) : "-");
+      for (const h of captureHealth())
+        console.log(`  ${h.status.padEnd(8)} ${h.label.padEnd(14)} last stored ${day(h.lastStoredAt)} · 7d ${h.stored7d} msgs, ${h.events7d} events${h.reason ? ` · ${h.reason}` : ""}`);
       break;
     }
     default: {

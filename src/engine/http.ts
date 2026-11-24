@@ -345,6 +345,9 @@ export function startHttpServer(): Promise<void> {
           if (m) emitEvent("memory_approved", { count: 1, items: [{ kind: m.kind, project: projectSlugById(m.projectId), content: m.content }] });
         }
         sendJson(res, ok ? 200 : 404, { ok });
+      } else if (url.pathname === "/api/capture-health" && req.method === "GET") {
+        const { captureHealth } = await import("./ingest/health");
+        sendJson(res, 200, { tools: captureHealth() });
       } else if (url.pathname === "/api/retrievals" && req.method === "GET") {
         const { listRetrievals, retrievalStats } = await import("./retrieve/inspector");
         const limit = numParam(url.searchParams.get("limit") ?? undefined, 50, 1, 500);

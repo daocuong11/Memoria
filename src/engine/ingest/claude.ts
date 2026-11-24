@@ -12,7 +12,7 @@ import { claudeQuestionEvent, claudeTitleEvent, claudeTodoEvents, toolCallEvents
 import { withTx } from "../store/tx";
 import { walkFiles, safeJson, textFromContent, projectSlugFromCwd, readLinesIncremental, isToolResultOnly, stripInjectedTags } from "./util";
 
-export async function scanClaude(root: string, log?: (msg: string) => void): Promise<{ files: number; lines: number }> {
+export async function scanClaude(root: string, log?: (msg: string) => void): Promise<{ files: number; lines: number; fileErrors: number }> {
   // A single transcript file is accepted too (Claude Code hooks pass transcript_path).
   let isFile = false;
   try {
@@ -22,8 +22,11 @@ export async function scanClaude(root: string, log?: (msg: string) => void): Pro
   }
   const files = isFile ? (root.endsWith(".jsonl") ? [root] : []) : walkFiles(root, [".jsonl"]);
   let totalLines = 0;
+  let fileErrors = 0;
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
+    // One unreadable or malformed file must not stop the rest of the scan.
+    try {
     const mtime = fs.statSync(file).mtimeMs;
     const stored = getSourceOffset("claude", file);
     const { lines, finalOffset } = await readLinesIncremental(file, stored);
@@ -104,9 +107,14 @@ export async function scanClaude(root: string, log?: (msg: string) => void): Pro
       }
     });
     setSourceOffset("claude", file, finalOffset, mtime);
+    } catch (e) {
+      fileErrors++;
+      log?.(`claude: skipped ${file}: ${String(e).slice(0, 160)}`);
+      continue;
+    }
     if (log && (i % 10 === 0 || i === files.length - 1)) {
       log(`claude: ${i + 1}/${files.length} file, ${totalLines} pesan`);
     }
   }
-  return { files: files.length, lines: totalLines };
+  return { files: files.length, lines: totalLines, fileErrors };
 }

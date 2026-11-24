@@ -11,6 +11,7 @@ import { scanAntigravityBrain } from "./antigravity-brain";
 import { scanVscdb } from "./vscdb";
 import { scanVscodeChatSessions, scanCursorComposer } from "./vscode-chat";
 import { extractQueue } from "../extract/extractor";
+import { recordScan } from "./health";
 import { emitEvent } from "../events";
 
 export interface ScanResult {
@@ -51,6 +52,8 @@ export async function scanAll(log?: (msg: string) => void): Promise<ScanResult[]
         results.push({ tool: src.tool, ok: false, detail: "disabled", count: 0 });
         continue;
       }
+      const started = Date.now();
+      let fileErrors = 0;
       try {
         let count = 0;
         switch (src.kind) {
@@ -59,6 +62,7 @@ export async function scanAll(log?: (msg: string) => void): Promise<ScanResult[]
               for (const p of src.paths) {
                 const r = await scanClaude(p, log);
                 count += r.lines;
+                fileErrors += r.fileErrors;
               }
             } else if (src.tool === "codex") {
               for (const p of src.paths) {
@@ -106,8 +110,10 @@ export async function scanAll(log?: (msg: string) => void): Promise<ScanResult[]
             break;
         }
         results.push({ tool: src.tool, ok: true, detail: "ok", count });
+        recordScan(src.tool, { ok: true, detail: "ok", count, ms: Date.now() - started, fileErrors });
       } catch (e) {
         results.push({ tool: src.tool, ok: false, detail: String(e), count: 0 });
+        recordScan(src.tool, { ok: false, detail: String(e), count: 0, ms: Date.now() - started, fileErrors });
       }
     }
     // F3: tangkap jumlah memori baru (return extractQueue tadinya dibuang)
