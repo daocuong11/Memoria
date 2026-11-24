@@ -9,7 +9,7 @@ import {
   insertSessionEvent,
 } from "../store/db";
 import { projectSlugFromCwd, stripInjectedTags } from "./util";
-import { normalizeTodos, opencodeQuestionEvent } from "./events";
+import { normalizeTodos, opencodeQuestionEvent, toolCallEvents } from "./events";
 
 export function scanOpencode(dbPath: string): { messages: number } {
   if (!fs.existsSync(dbPath)) return { messages: 0 };
@@ -94,6 +94,13 @@ export function scanOpencode(dbPath: string): { messages: number } {
           } else if (pd.type === "tool" && pd.tool === "bash") {
             const cmd = pd.state?.metadata?.command || pd.state?.input?.command;
             if (cmd) toolParts.push(`$ ${cmd}`);
+          }
+          if (pd.type === "tool" && pd.state?.status === "completed" && ["bash", "edit", "write", "patch"].includes(pd.tool)) {
+            const st = pd.state;
+            const output = String(st.output ?? st.metadata?.output ?? "");
+            const exit = typeof st.metadata?.exit === "number" ? st.metadata.exit : null;
+            for (const e of toolCallEvents(String(pd.callID || p.id), pd.tool, st.input || {}, output, { exitCode: exit }))
+              event(sess.id, projectId, ts, e.type, e.sourceRef, e.payload);
           }
         }
         const rows: Array<{ role: "user" | "assistant" | "system" | "tool"; content: string }> = [

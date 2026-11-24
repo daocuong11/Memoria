@@ -23,11 +23,12 @@ import {
   getSetting,
   insertMemory,
   markResolved,
+  sessionEvents,
   setSetting,
   updateMemory,
   type SessionEvent,
 } from "../store/db";
-import type { AnsweredQuestion, TodoItem } from "../ingest/events";
+import { errorBelongsTo, type AnsweredQuestion, type TodoItem } from "../ingest/events";
 
 const CURSOR_KEY = "eventsProcessedId";
 const TASK_IMPORTANCE = 0.6;
@@ -163,17 +164,162 @@ async function upsertDecision(ev: SessionEvent, q: AnsweredQuestion, embed: Embe
   out.created++;
 }
 
+/* ---------- Error → fix from verifier runs (Q2b) ----------
+ * A verifier run that failed WITH an error line, then edits to code files,
+ * then the same verifier passing: one `error_fixed` memory. A verifier that
+ * still fails when the session has been quiet for an hour: one `working`
+ * task "still failing"; it is closed when a later run passes. */
+
+const QUIET_MS = 60 * 60_000;
+
+export interface ErrorFix {
+  verifier: string;
+  errorLine: string;
+  files: string[];
+  ts: number;
+  eventId: number;
+}
+
+export interface OpenFailure {
+  verifier: string;
+  errorLine: string;
+  ts: number;
+  eventId: number;
+}
+
+/** Pure pairing over one session's command / file_edit events (time order). */
+export function pairErrorFixes(events: SessionEvent[]): { fixes: ErrorFix[]; open: OpenFailure[] } {
+  const fixes: ErrorFix[] = [];
+  const open = new Map<string, { errorLine: string; ts: number; eventId: number; files: string[] }>();
+  for (const ev of events) {
+    if (ev.type === "file_edit") {
+      if (!ev.payload.code) continue;
+      const p = String(ev.payload.path || "");
+      for (const o of open.values()) if (p && !o.files.includes(p)) o.files.push(p);
+      continue;
+    }
+    if (ev.type !== "command") continue;
+    const verifier = String(ev.payload.verifier || "");
+    if (!verifier) continue;
+    if (ev.payload.failed) {
+      const line = String(ev.payload.errorLine || "");
+      if (errorBelongsTo(verifier, line) && !open.has(verifier)) open.set(verifier, { errorLine: line, ts: ev.ts, eventId: ev.id ?? 0, files: [] });
+      continue;
+    }
+    const o = open.get(verifier);
+    if (!o) continue;
+    open.delete(verifier);
+    if (o.files.length) fixes.push({ verifier, errorLine: o.errorLine, files: o.files.slice(0, 5), ts: ev.ts, eventId: ev.id ?? 0 });
+  }
+  return { fixes, open: [...open.entries()].map(([verifier, o]) => ({ verifier, errorLine: o.errorLine, ts: o.ts, eventId: o.eventId })) };
+}
+
+function shortPath(p: string): string {
+  return p.split(/[\\/]/).filter(Boolean).slice(-2).join("/");
+}
+
+export function errorFixContent(f: ErrorFix): string {
+  return `\`${f.verifier}\` failed with "${f.errorLine}"; fixed by editing ${f.files.map(shortPath).join(", ")}.`;
+}
+
+function stillFailingContent(o: OpenFailure): string {
+  return `\`${o.verifier}\` still fails: "${o.errorLine}"`;
+}
+
+async function insertEventMemory(
+  ev: SessionEvent,
+  m: { kind: string; content: string; importance: number; memoryClass: string; expiresAt?: number; gitCommit?: string },
+  embed: Embed
+): Promise<number> {
+  const embedding = (await embed(m.content)) || null;
+  return insertMemory({
+    projectId: ev.projectId,
+    kind: m.kind,
+    content: m.content,
+    importance: m.importance,
+    createdAt: ev.ts,
+    lastAccessed: 0,
+    accessCount: 0,
+    sourceTool: ev.tool,
+    embedding,
+    embedModel: embedding ? embedModel : "",
+    status: "active",
+    origin: "heuristic",
+    sourceSession: ev.sessionId,
+    sourceEventId: ev.id,
+    gitBranch: ev.gitBranch,
+    gitCommit: m.gitCommit,
+    memoryClass: m.memoryClass,
+    expiresAt: m.expiresAt,
+  });
+}
+
+async function processVerifierSession(tool: string, sessionId: string, projectId: number | null, embed: Embed, out: MaterializeResult, now: number): Promise<void> {
+  const evs = sessionEvents({ tool, sessionId, types: ["command", "file_edit"], limit: 10000 });
+  if (!evs.length) return;
+  const { fixes, open } = pairErrorFixes(evs);
+  const base = (e: { ts: number; eventId: number }): SessionEvent => ({ ...evs.find((x) => x.id === e.eventId)!, ts: e.ts, id: e.eventId });
+  for (const f of fixes) {
+    const content = errorFixContent(f);
+    if (!findMemory(projectId, ["error_fixed"], content)) {
+      await insertEventMemory(base(f), { kind: "error_fixed", content, importance: 0.65, memoryClass: "durable" }, embed);
+      out.created++;
+    }
+    // A "still failing" task for this run is now done.
+    const stale = findMemory(projectId, ["task_pending"], stillFailingContent({ verifier: f.verifier, errorLine: f.errorLine, ts: 0, eventId: 0 }));
+    if (stale && !stale.archived && archiveMemory(stale.id, true)) out.archived++;
+  }
+  const last = evs[evs.length - 1].ts;
+  if (now - last < QUIET_MS) return; // the session may still be fixing it
+  for (const o of open) {
+    const content = stillFailingContent(o);
+    if (findMemory(projectId, ["task_pending", "task_done"], content)) continue;
+    await insertEventMemory(base(o), { kind: "task_pending", content, importance: 0.55, memoryClass: "working", expiresAt: o.ts + 7 * DAY }, embed);
+    out.created++;
+  }
+}
+
+const COMMIT_KIND: Array<[RegExp, string]> = [
+  [/^fix(?:\([^)]*\))?!?:\s*\S/i, "error_fixed"],
+  [/^(?:feat|perf)(?:\([^)]*\))?!?:\s*\S/i, "task_done"],
+];
+
+async function upsertCommit(ev: SessionEvent, embed: Embed, out: MaterializeResult): Promise<void> {
+  const message = String(ev.payload.message || "").trim();
+  const sha = String(ev.payload.sha || "");
+  const kind = COMMIT_KIND.find(([re]) => re.test(message))?.[1];
+  if (!kind || !sha || /^Merge /.test(message)) return;
+  if (getDb().prepare("SELECT 1 AS x FROM memories WHERE git_commit = ? AND project_id IS ?").get(sha, ev.projectId)) return;
+  if (findMemory(ev.projectId, [kind], message)) return;
+  await insertEventMemory(ev, { kind, content: message, importance: 0.6, memoryClass: "durable", gitCommit: sha }, embed);
+  out.created++;
+}
+
 /** Turn new session events into memories. `embed` gives the vector for new
  * memories (the active embedding provider). */
-export async function materializeEvents(embed: Embed, opts: { limit?: number; embedModel?: string } = {}): Promise<MaterializeResult> {
+export async function materializeEvents(embed: Embed, opts: { limit?: number; embedModel?: string; now?: number } = {}): Promise<MaterializeResult> {
   embedModel = opts.embedModel || "";
+  const now = opts.now ?? Date.now();
   const out: MaterializeResult = { events: 0, created: 0, updated: 0, archived: 0 };
   const d = getDb();
   const from = Number(getSetting(CURSOR_KEY, "0")) || 0;
   const rows = d
     .prepare("SELECT id, tool, session_id, project_id, ts, type, payload, git_branch FROM session_events WHERE id > ? ORDER BY id LIMIT ?")
     .all(from, opts.limit ?? 5000) as unknown as Row[];
-  if (!rows.length) return out;
+  // Verifier sessions to (re)check: new events, plus recent sessions that may
+  // have gone quiet since the last pass (for "still failing" tasks).
+  const verifierSessions = new Map<string, { tool: string; sessionId: string; projectId: number | null }>();
+  const addSession = (tool: string, sessionId: string, projectId: number | null): void => {
+    verifierSessions.set(`${tool}\u0000${sessionId}`, { tool, sessionId, projectId });
+  };
+  for (const r of d
+    .prepare("SELECT DISTINCT tool, session_id, project_id FROM session_events WHERE type = 'command' AND ts > ? AND ts < ?")
+    .all(now - 2 * DAY, now - QUIET_MS) as Array<{ tool: string; session_id: string; project_id: number | null }>)
+    addSession(r.tool, r.session_id, r.project_id);
+  if (!rows.length) {
+    for (const v of verifierSessions.values()) await processVerifierSession(v.tool, v.sessionId, v.projectId, embed, out, now);
+    return out;
+  }
   // Todo lists: only the newest list per session matters, but an item seen
   // only in an older list still counts (with its last status).
   const lists = new Map<string, SessionEvent[]>();
@@ -185,8 +331,13 @@ export async function materializeEvents(embed: Embed, opts: { limit?: number; em
       (lists.get(key) ?? lists.set(key, []).get(key)!).push(ev);
     } else if (ev.type === "question") {
       for (const q of (ev.payload.questions as AnsweredQuestion[]) || []) await upsertDecision(ev, q, embed, out);
+    } else if (ev.type === "command" || ev.type === "file_edit") {
+      addSession(ev.tool, ev.sessionId, ev.projectId);
+    } else if (ev.type === "commit") {
+      await upsertCommit(ev, embed, out);
     }
   }
+  for (const v of verifierSessions.values()) await processVerifierSession(v.tool, v.sessionId, v.projectId, embed, out, now);
   for (const evs of lists.values()) {
     evs.sort((a, b) => a.ts - b.ts || (a.id ?? 0) - (b.id ?? 0));
     const last = new Map<string, { ev: SessionEvent; item: TodoItem }>();

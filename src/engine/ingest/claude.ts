@@ -8,7 +8,7 @@ import {
   insertSessionEvent,
   getDb,
 } from "../store/db";
-import { claudeQuestionEvent, claudeTitleEvent, claudeTodoEvents, type EventDraft } from "./events";
+import { claudeQuestionEvent, claudeTitleEvent, claudeTodoEvents, toolCallEvents, type EventDraft } from "./events";
 import { withTx } from "../store/tx";
 import { walkFiles, safeJson, textFromContent, projectSlugFromCwd, readLinesIncremental, isToolResultOnly, stripInjectedTags } from "./util";
 
@@ -37,6 +37,8 @@ export async function scanClaude(root: string, log?: (msg: string) => void): Pro
       const projectOf = new Map<string, number>();
       const lastTs = new Map<string, number>();
       const titles: Array<{ sessionId: string; e: EventDraft }> = [];
+      // tool_use id → call, to pair with its tool_result in a later line.
+      const calls = new Map<string, { name: string; input: Record<string, any> }>();
       const addEvent = (e: EventDraft, sessionId: string, projectId: number | null, ts: number, gitBranch: string): void => {
         insertSessionEvent({ tool: "claude", sessionId, projectId, ts, type: e.type, sourceRef: e.sourceRef, payload: e.payload, gitBranch });
       };
@@ -74,10 +76,25 @@ export async function scanClaude(root: string, log?: (msg: string) => void): Pro
         // Todo lists (TodoWrite, update_plan) and answered questions become
         // session events; extract/events.ts turns them into memories with the
         // agent's own status instead of guessing from a checklist text row.
-        if (j.type === "assistant") for (const e of claudeTodoEvents(rawContent)) addEvent(e, sessionId, projectId, eventTs, branch);
+        if (j.type === "assistant") {
+          for (const e of claudeTodoEvents(rawContent)) addEvent(e, sessionId, projectId, eventTs, branch);
+          if (Array.isArray(rawContent))
+            for (const b of rawContent) if (b && b.type === "tool_use" && b.id) calls.set(String(b.id), { name: String(b.name || ""), input: b.input || {} });
+        }
         if (j.type === "user") {
           const q = claudeQuestionEvent(j);
           if (q) addEvent(q, sessionId, projectId, eventTs, branch);
+          // Verifier runs, file edits and commits, judged from the result.
+          if (Array.isArray(rawContent))
+            for (const b of rawContent) {
+              if (!b || b.type !== "tool_result") continue;
+              const call = calls.get(String(b.tool_use_id || ""));
+              if (!call) continue;
+              const r = j.toolUseResult;
+              const output = r && typeof r === "object" && typeof r.stdout === "string" ? `${r.stdout}\n${r.stderr || ""}` : textFromContent(b.content);
+              for (const e of toolCallEvents(String(b.tool_use_id), call.name, call.input, output, { isError: b.is_error === true }))
+                addEvent(e, sessionId, projectId, eventTs, branch);
+            }
         }
       }
       const knownProject = getDb().prepare("SELECT project_id AS p, MAX(ts) AS t FROM transcripts WHERE tool = 'claude' AND session_id = ?");
