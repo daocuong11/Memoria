@@ -28,6 +28,7 @@ Usage: memoria <command>
   handoff <slug>         Print the resume block for a project
   journal [days]         Learning journal: fixed errors, recurring first (default 7 days)
   maintain triage        Preview Tier 0 auto-triage (--apply, --undo)
+  maintain backfill-events  Re-read Claude Code / OpenCode for todos, questions, verifier runs, commits
   maintain <reembed|consolidate|all>
   sync <setup|status|export|import|folder|conflicts>
   backup                 Back up the database
@@ -142,6 +143,14 @@ async function main(): Promise<void> {
         else if (r.batch) console.log(`\nBatch ${r.batch}. Revert with: maintain triage --undo`);
         break;
       }
+      if (sub === "backfill-events") {
+        const { backfillEvents } = await import("./ingest/backfill");
+        const r = await backfillEvents({ log: (m) => console.log(m) });
+        console.log(`New transcripts: ${r.newTranscripts} | memories from events: ${r.memoriesCreated} | duplicate todo memories archived: ${r.duplicatesArchived}`);
+        for (const [k, n] of Object.entries(r.events).sort()) console.log(`  ${k.padEnd(22)} ${n}`);
+        if (r.batch) console.log(`Revert the duplicate archiving with: maintain triage --undo`);
+        break;
+      }
       if (sub === "heuristic-promote" || sub === "all") {
         const { promoteLegacyHeuristicDrafts } = await import("./extract/heuristic");
         const r = promoteLegacyHeuristicDrafts(2000);
@@ -158,7 +167,7 @@ async function main(): Promise<void> {
         console.log(`Consolidation: removed ${r.removed} in ${r.clusters} clusters`);
       }
       if (!["heuristic-promote", "reembed", "all", "consolidate"].includes(sub)) {
-        console.log("Usage: node dist/engine/index.js maintain <triage [--apply|--undo]|heuristic-promote|reembed|consolidate|all>");
+        console.log("Usage: node dist/engine/index.js maintain <triage [--apply|--undo]|backfill-events|heuristic-promote|reembed|consolidate|all>");
         process.exit(1);
       }
       break;
