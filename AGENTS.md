@@ -77,6 +77,8 @@ ulang konteks.
   `(tool, session_id, source_ref)`, payload diredaksi per nilai), lalu
   `materializeEvents` (kursor `eventsProcessedId`). Gagal/lulus verifier dibaca
   dari **isi output**, bukan exit code.
+- **Server / app pada salinan DB nyata wajib `MEMORIA_NO_INJECT=1`**: path proyek
+  di DB adalah folder asli, jadi HOME palsu tidak mencegah injeksi blok resume.
 - Pengujian yang membaca sumber asli: panggil parser langsung (`scanClaude`,
   `scanOpencode`, `backfillEvents`). **Jangan `scanAll` dengan HOME asli** —
   sinyal limit menulis blok resume ke file proyek sungguhan.

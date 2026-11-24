@@ -8,6 +8,8 @@
   "Memory summary across all AI tools": "Ringkasan memori lintas semua AI tools",
   "Retrievals": "Pengambilan",
   "Capture health": "Kesehatan capture",
+  "No backups yet. Click \"Back up now\" to make the first one.": "Belum ada cadangan. Klik \"Cadangkan sekarang\" untuk membuat yang pertama.",
+  "Restore this backup? The current database is replaced.": "Pulihkan cadangan ini? Database saat ini akan diganti.",
   "Whether each AI tool's sessions are reaching Memoria. Behind = the tool kept writing after the last stored message.": "Apakah sesi tiap AI tool sampai ke Memoria. Tertinggal = tool masih menulis setelah pesan terakhir yang tersimpan.",
   "OK": "OK",
   "Behind": "Tertinggal",

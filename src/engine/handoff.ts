@@ -1,3 +1,4 @@
+import * as os from "node:os";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { allMemories, getDb, projectRecord, getBoolSetting, getSetting, setSetting, readMemories } from "./store/db";
@@ -131,8 +132,12 @@ export async function collectResumeData(slug: string, opts: { slim?: boolean } =
 
   // Deterministic fallback (no LLM): when structured memories are not enough yet,
   // pull signals from heuristic drafts/snapshots & the latest transcripts so
-  // limit-hopping still connects in offline/heuristic mode.
-  if (tasks.length < maxTasks || decisions.length < maxDecisions) {
+  // limit-hopping still connects in offline/heuristic mode. Under the default
+  // structured promotion policy this is off: those drafts are exactly the
+  // sentences that measured 42% precise, and the resume block is served unasked.
+  const { promotePolicy } = require("./extract/heuristic") as typeof import("./extract/heuristic");
+  const draftFallback = promotePolicy() === "evidence";
+  if (draftFallback && (tasks.length < maxTasks || decisions.length < maxDecisions)) {
     try {
       const drafts = readMemories(
         `WHERE project_id = ? AND archived = 0 AND status = 'draft' AND origin = 'heuristic'
@@ -146,7 +151,7 @@ export async function collectResumeData(slug: string, opts: { slim?: boolean } =
       }
     } catch { /* ignore */ }
   }
-  if (tasks.length < maxTasks || decisions.length < maxDecisions) {
+  if (draftFallback && (tasks.length < maxTasks || decisions.length < maxDecisions)) {
     const derived = deriveResumeFromTranscripts(proj.id);
     for (const t of derived.tasks) pushUnique(tasks, t.content, t.importance, maxTasks);
     for (const d of derived.decisions) pushUnique(decisions, d.content, d.importance, maxDecisions);
@@ -407,13 +412,24 @@ export function removeInjectAll(slug: string): Array<{ file: string; ok: boolean
   });
 }
 
+/** Project folders that may receive a resume block. Never the home folder or
+ * a filesystem root (a session started in ~ is not a project), and never
+ * when MEMORIA_NO_INJECT=1 (tests, audits on a copy of a real database). */
+export function injectableFolder(p: string): boolean {
+  if (process.env.MEMORIA_NO_INJECT === "1") return false;
+  const resolved = path.resolve(p);
+  if (resolved === path.parse(resolved).root) return false;
+  if (resolved === path.resolve(os.homedir())) return false;
+  return fs.existsSync(resolved);
+}
+
 const MARK_START = "<!-- memoria:start -->";
 const MARK_END = "<!-- memoria:end -->";
 const MARK_RE = /<!-- (?:pecut-memory|memoria):start -->[\s\S]*?<!-- (?:pecut-memory|memoria):end -->\n?/;
 
 export async function injectHandoff(slug: string, targetFile = "AGENTS.md", opts: HandoffOptions = {}): Promise<{ ok: boolean; file: string }> {
   const proj = projectRecord(slug);
-  if (!proj || !proj.path) return { ok: false, file: targetFile };
+  if (!proj || !proj.path || !injectableFolder(proj.path)) return { ok: false, file: targetFile };
   const md = await generateHandoff(slug, opts);
   const block = `${MARK_START}\n${md}\n${MARK_END}\n`;
   const target = path.join(proj.path, targetFile);

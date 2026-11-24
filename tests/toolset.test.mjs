@@ -73,3 +73,23 @@ test("resume block: last turn report, no turn reports in the list, no repeats", 
   const n = block.split("Add a retry to the importer").length - 1;
   assert.equal(n, 1, "an open task listed in the resume section is not repeated below");
 });
+
+test("injection guard: never the home folder or a root; MEMORIA_NO_INJECT=1 turns it off", () => {
+  const { injectableFolder } = require("../dist/engine/handoff.js");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "memoria-inj-"));
+  assert.equal(injectableFolder(dir), true);
+  assert.equal(injectableFolder(os.homedir()), false);
+  assert.equal(injectableFolder(path.parse(dir).root), false);
+  assert.equal(injectableFolder(path.join(dir, "missing")), false);
+  process.env.MEMORIA_NO_INJECT = "1";
+  assert.equal(injectableFolder(dir), false);
+  delete process.env.MEMORIA_NO_INJECT;
+});
+
+test("resume block (structured policy): unreviewed heuristic drafts are not listed as open tasks", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "memoria-tools-draft-"));
+  const pid = dbmod.ensureProject("tools-draft", root);
+  dbmod.insertMemory({ projectId: pid, kind: "task_pending", content: "Ini, tinggal copy-paste captionnya ke thread nanti", importance: 0.6, createdAt: Date.now(), sourceTool: "opencode", status: "draft", origin: "heuristic" });
+  const block = await generateHandoff(dbmod.projectSlugById(pid), { slim: true });
+  assert.ok(!block.includes("tinggal copy-paste"), block);
+});
