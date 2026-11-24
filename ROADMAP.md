@@ -82,17 +82,37 @@ Resources, parameter `feedback` di tool MCP, compaction tanpa LLM.
 ### C. Target gerbang v0.18
 | Metrik | Sekarang | Target |
 |---|---|---|
-| Ketepatan memori aktif | 41% (25–59%) | ≥70% Tier 0, ≥85% + LLM |
-| Noise terbuang | 70% (62–77%) | ≥85% |
-| Memori asli tersimpan | 91% (73–98%) | ≥90% |
+| Ketepatan memori aktif | 38% (24–53%), held-out v2 | ≥70% Tier 0, ≥85% + LLM |
+| Noise terbuang | 80% (77–84%), held-out v2 | ≥85% |
+| Memori asli tersimpan | 75% (62–84%), held-out v2 | ≥90% |
 | Memori bagus terjangkau | 13/32 | ≥26/32 |
-| Recall hit@5 (a) sekarang / (b) promosi ideal | 34% / 69% | ≥70% / ≥80% |
+| Recall hit@5 (a) sekarang / (b) promosi ideal | 26% / 72% (50 query) | ≥70% / ≥80% |
 | Todo tertangkap | 1% | ≥90% |
 | Ketepatan error→fix | ≈94% (sampel, belum diimplementasi) | ≥90% |
 | Memori basi disajikan | belum diukur | <5% |
 | Token per sesi (tool + resume) | ≈2.000 | <1.200 |
 | Kesehatan capture | belum ada | ada per tool |
 | Uji serah terima | baseline langkah 8 | tak ada task/keputusan aktif hilang |
+
+### C2. Baseline Q-eval (2026-11-24)
+Sampel buta baru **held-out v2**: 500 memori heuristik acak, dilabel sebelum
+classifier jalan (55 memori asli). Tidak dipakai untuk menyetel aturan.
+
+| Metrik | Held-out v1 (150) | **Held-out v2 (500)** | Rentang 95% v2 |
+|---|---|---|---|
+| Ketepatan memori aktif | 41% (11/27) | **38% (15/40)** | 24–53% |
+| Noise terbuang | 70% | **80% (358/445)** | 77–84% |
+| Memori asli tersimpan | 91% (21/23) | **75% (41/55)** | 62–84% |
+| Recall hit@5, 50 query: (a) sekarang / (b) promosi ideal | — | **26% / 72%** (MRR 0,23 / 0,61) | — |
+
+**Belum tercapai:** ≥90 prediksi aktif (baru 40) — rentang ketepatan masih
+±15. Ditambah di gerbang (langkah 17) dengan sampel yang lebih besar.
+
+**Kehilangan memori di v2 (14 dari 55), penyebabnya:**
+- Pesan commit dibuang aturan `git-output` (3) → ditangani sebagai event di Q2b.
+- Baris konfigurasi/endpoint (`*_RPC_URL=…`, `**Endpoint:**`) dibuang `too-few-words` (5).
+- Baris tabel bermakna dibuang `table-row` (2).
+- Regresi aturan baru: frasa `berarti` (`user-request`) dan `dangling-colon` (2) → diperbaiki di Q1/Q3.
 
 ### D. Audit eksternal 24 poin (sudah dicek ke kode)
 Sudah ada: WAL+busy_timeout, supersede, dedupe saat tulis, redaksi secret,
