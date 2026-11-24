@@ -194,7 +194,7 @@ function shortText(s: string, max = 140): string {
   return s.replace(/\s+/g, " ").trim().slice(0, max) + (s.length > max ? "…" : "");
 }
 
-/** Lines for the "⏸️ SESSION CONTINUATION" section — empty when there is no data at all. */
+/** Lines for the "## SESSION RESUME" section — empty when there is no data at all. */
 export function resumeSectionLines(d: ResumeData): string[] {
   const hasAny = d.lastTool || d.tasks.length || d.decisions.length || (d.git?.dirty.length ?? 0) || !!d.snapshot;
   if (!hasAny) return [];
