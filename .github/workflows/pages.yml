@@ -6,7 +6,7 @@ name: pages
 on:
   push:
     branches: [main]
-    paths: ["site/**", "scripts/site-assets.mjs", ".github/workflows/pages.yml"]
+    paths: ["site/**", "CHANGELOG.md", "scripts/site-assets.mjs", "scripts/site-changelog.mjs", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -27,6 +27,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -51,6 +53,8 @@ jobs:
           fi
       - name: Shared assets
         run: node scripts/site-assets.mjs "$SITE_OUT"
+      - name: Changelog page
+        run: node scripts/site-changelog.mjs "$SITE_OUT"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ${{ env.SITE_OUT }}
