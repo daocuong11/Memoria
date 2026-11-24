@@ -44,6 +44,14 @@ export interface Memory {
    * (0 = masih berlaku). Archive/resolved menutup window. */
   validFrom?: number;
   validTo?: number;
+  /** M13 (all optional): session event this memory came from (local id). */
+  sourceEventId?: number;
+  gitBranch?: string;
+  gitCommit?: string;
+  /** '' unclassified · 'working' short-lived · 'durable' */
+  memoryClass?: string;
+  /** 0 = never expires. */
+  expiresAt?: number;
 }
 
 let db: DatabaseSync | null = null;
@@ -212,7 +220,112 @@ const MIGRATIONS: Migration[] = [
   { version: 10, name: "superseded-decisions", up: m10SupersededBy },
   { version: 11, name: "legacy-claude-roles", up: m11LegacyClaudeRoles },
   { version: 12, name: "retrieval-log", up: m12RetrievalLog },
+  { version: 13, name: "session-events-memory-meta", up: m13SessionEvents },
 ];
+
+export const MEMORY_CLASSES = ["", "working", "durable"] as const;
+
+/** M13: structured events from agent sessions (todos, questions, titles,
+ * verifier runs, file edits, commits) in a local table that is never synced,
+ * plus optional memory columns that later steps fill in:
+ * - source_event_id: the session event a memory came from (local only)
+ * - git_branch / git_commit: where the work happened
+ * - memory_class: '' (unclassified), 'working' (short-lived) or 'durable'
+ * - expires_at: when a working memory stops being served (0 = never) */
+function m13SessionEvents(d: DatabaseSync): void {
+  const have = new Set((d.prepare("PRAGMA table_info(memories)").all() as Array<{ name: string }>).map((c) => c.name));
+  const add: Array<[string, string]> = [
+    ["source_event_id", "INTEGER DEFAULT 0"],
+    ["git_branch", "TEXT DEFAULT ''"],
+    ["git_commit", "TEXT DEFAULT ''"],
+    ["memory_class", "TEXT DEFAULT ''"],
+    ["expires_at", "INTEGER DEFAULT 0"],
+  ];
+  for (const [col, type] of add) if (!have.has(col)) d.exec(`ALTER TABLE memories ADD COLUMN ${col} ${type}`);
+  d.exec(`
+    CREATE INDEX IF NOT EXISTS idx_memories_expires ON memories(expires_at) WHERE expires_at > 0;
+    CREATE TABLE IF NOT EXISTS session_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tool TEXT NOT NULL,
+      session_id TEXT NOT NULL,
+      project_id INTEGER,
+      ts INTEGER NOT NULL,
+      type TEXT NOT NULL,
+      source_ref TEXT NOT NULL,
+      payload TEXT NOT NULL DEFAULT '{}',
+      git_branch TEXT DEFAULT '',
+      UNIQUE(tool, session_id, source_ref)
+    );
+    CREATE INDEX IF NOT EXISTS idx_session_events_project_ts ON session_events(project_id, ts);
+    CREATE INDEX IF NOT EXISTS idx_session_events_session ON session_events(tool, session_id, ts);
+    CREATE INDEX IF NOT EXISTS idx_session_events_type_ts ON session_events(type, ts);
+  `);
+}
+
+export interface SessionEvent {
+  id?: number;
+  tool: string;
+  sessionId: string;
+  projectId: number | null;
+  ts: number;
+  /** todo | question | title | recap | command | file_edit | commit | ... */
+  type: string;
+  /** Stable id inside the source (jsonl uuid, opencode part id) — makes re-reads idempotent. */
+  sourceRef: string;
+  payload: Record<string, unknown>;
+  gitBranch?: string;
+}
+
+/** Insert one event; a repeat of the same (tool, session, sourceRef) is
+ * ignored. Text in the payload is redacted. Returns the new id or null. */
+export function insertSessionEvent(e: SessionEvent): number | null {
+  const json = redactSecrets(JSON.stringify(e.payload ?? {})).text;
+  const res = getDb()
+    .prepare(
+      `INSERT OR IGNORE INTO session_events (tool, session_id, project_id, ts, type, source_ref, payload, git_branch)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(e.tool, e.sessionId, e.projectId, e.ts, e.type, e.sourceRef, json, e.gitBranch || "");
+  return Number(res.changes) > 0 ? Number(res.lastInsertRowid) : null;
+}
+
+export function sessionEvents(o: { projectId?: number | null; tool?: string; sessionId?: string; types?: string[]; since?: number; limit?: number } = {}): SessionEvent[] {
+  const where: string[] = [];
+  const params: Array<string | number | null> = [];
+  if (o.projectId !== undefined) {
+    where.push("project_id IS ?");
+    params.push(o.projectId);
+  }
+  if (o.tool) {
+    where.push("tool = ?");
+    params.push(o.tool);
+  }
+  if (o.sessionId) {
+    where.push("session_id = ?");
+    params.push(o.sessionId);
+  }
+  if (o.types?.length) {
+    where.push(`type IN (${o.types.map(() => "?").join(",")})`);
+    params.push(...o.types);
+  }
+  if (o.since) {
+    where.push("ts >= ?");
+    params.push(o.since);
+  }
+  params.push(Math.min(10000, Math.max(1, o.limit ?? 1000)));
+  const rows = getDb()
+    .prepare(`SELECT * FROM session_events ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY ts, id LIMIT ?`)
+    .all(...params) as Array<{ id: number; tool: string; session_id: string; project_id: number | null; ts: number; type: string; source_ref: string; payload: string; git_branch: string | null }>;
+  return rows.map((r) => {
+    let payload: Record<string, unknown> = {};
+    try {
+      payload = JSON.parse(r.payload || "{}");
+    } catch {
+      payload = {};
+    }
+    return { id: r.id, tool: r.tool, sessionId: r.session_id, projectId: r.project_id, ts: r.ts, type: r.type, sourceRef: r.source_ref, payload, gitBranch: r.git_branch || "" };
+  });
+}
 
 /** M12: local log of what each context tool returned (retrieval inspector)
  * and the "not relevant" marks made on it. Never synced; capped in
@@ -1125,6 +1238,7 @@ export function memorySyncPayload(id: number): { uid: string; payload: Record<st
   return {
     uid: row.uid,
     payload: {
+      ...memoryMetaPayload(id),
       projectUid: row.project_uid || null,
       kind: row.kind,
       content: row.content,
@@ -1143,6 +1257,26 @@ export function memorySyncPayload(id: number): { uid: string; payload: Record<st
       validTo: row.valid_to || 0,
     },
   };
+}
+
+/** M13 metadata in a sync payload. Older versions ignore unknown payload
+ * fields, so these travel safely; `source_event_id` stays local because
+ * session events are never synced. Empty before migration v13 runs. */
+function memoryMetaPayload(id: number): Record<string, unknown> {
+  try {
+    const r = getDb()
+      .prepare("SELECT git_branch, git_commit, memory_class, expires_at FROM memories WHERE id = ?")
+      .get(id) as { git_branch: string | null; git_commit: string | null; memory_class: string | null; expires_at: number | null } | undefined;
+    if (!r) return {};
+    return {
+      gitBranch: r.git_branch || "",
+      gitCommit: r.git_commit || "",
+      memoryClass: r.memory_class || "",
+      expiresAt: r.expires_at || 0,
+    };
+  } catch {
+    return {};
+  }
 }
 
 /** Queue a sync snapshot after a change made with direct SQL. */
@@ -1474,8 +1608,9 @@ export function insertMemory(m: Memory): number {
   const uid = m.uid || randomUUID();
   const now = Date.now();
   d.prepare(
-    `INSERT INTO memories (project_id, kind, content, importance, created_at, source_tool, embedding, status, origin, embed_model, uid, updated_at, updated_by, source_session, valid_from)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO memories (project_id, kind, content, importance, created_at, source_tool, embedding, status, origin, embed_model, uid, updated_at, updated_by, source_session, valid_from,
+       source_event_id, git_branch, git_commit, memory_class, expires_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     m.projectId,
     m.kind,
@@ -1491,7 +1626,12 @@ export function insertMemory(m: Memory): number {
     m.updatedAt || now,
     m.updatedBy || getDeviceId(),
     m.sourceSession || "",
-    m.validFrom || m.createdAt || now
+    m.validFrom || m.createdAt || now,
+    m.sourceEventId || 0,
+    (m.gitBranch || "").slice(0, 200),
+    (m.gitCommit || "").slice(0, 64),
+    (MEMORY_CLASSES as readonly string[]).includes(m.memoryClass || "") ? m.memoryClass || "" : "",
+    m.expiresAt || 0
   );
   // node:sqlite mengembalikan objek ber-prototype null — ambil properti .id-nya.
   // Number(row) di atas objek null-prototype melempar "Cannot convert object to
@@ -1844,7 +1984,8 @@ export function listMemoriesPage(status: string, limit: number, offset: number, 
 export function readMemoriesLite(whereClause: string, params: Array<number | string | null> = []): Memory[] {
   const rows = getDb()
     .prepare(
-      `SELECT id, project_id, kind, content, importance, created_at, last_accessed, access_count, source_tool, status, resolved_at, origin, embed_model, source_session, valid_from, valid_to, updated_at, updated_by
+      `SELECT id, project_id, kind, content, importance, created_at, last_accessed, access_count, source_tool, status, resolved_at, origin, embed_model, source_session, valid_from, valid_to, updated_at, updated_by,
+              source_event_id, git_branch, git_commit, memory_class, expires_at
        FROM memories ${whereClause}`
     )
     .all(...params) as unknown as Array<{
@@ -1866,6 +2007,11 @@ export function readMemoriesLite(whereClause: string, params: Array<number | str
     valid_to: number | null;
     updated_at: number | null;
     updated_by: string | null;
+    source_event_id?: number | null;
+    git_branch?: string | null;
+    git_commit?: string | null;
+    memory_class?: string | null;
+    expires_at?: number | null;
   }>;
   return rows.map((r) => ({
     id: r.id,
@@ -1886,6 +2032,11 @@ export function readMemoriesLite(whereClause: string, params: Array<number | str
     validTo: r.valid_to || 0,
     updatedAt: r.updated_at || 0,
     updatedBy: r.updated_by || "",
+    sourceEventId: r.source_event_id || 0,
+    gitBranch: r.git_branch || "",
+    gitCommit: r.git_commit || "",
+    memoryClass: r.memory_class || "",
+    expiresAt: r.expires_at || 0,
   }));
 }
 
@@ -1926,6 +2077,11 @@ export function readMemories(whereClause: string, params: Array<number | string 
     source_session: string | null;
     valid_from: number | null;
     valid_to: number | null;
+    source_event_id?: number | null;
+    git_branch?: string | null;
+    git_commit?: string | null;
+    memory_class?: string | null;
+    expires_at?: number | null;
   }>;
   return rows.map((r) => ({
     id: r.id,
@@ -1948,6 +2104,11 @@ export function readMemories(whereClause: string, params: Array<number | string 
     sourceSession: r.source_session || "",
     validFrom: r.valid_from || r.created_at || 0,
     validTo: r.valid_to || 0,
+    sourceEventId: r.source_event_id || 0,
+    gitBranch: r.git_branch || "",
+    gitCommit: r.git_commit || "",
+    memoryClass: r.memory_class || "",
+    expiresAt: r.expires_at || 0,
   }));
 }
 

@@ -56,6 +56,9 @@ interface MemoryPayload {
   /** M5: uid of the newer decision that replaced this one (null = current). */
   supersededByUid: string | null;
   validTo: number;
+  /** M13 metadata. Absent in bundles from older versions: then the local
+   * values are kept instead of being reset. */
+  meta: Partial<{ gitBranch: string; gitCommit: string; memoryClass: string; expiresAt: number }>;
 }
 
 interface LinkPayload {
@@ -141,7 +144,34 @@ function validateMemory(value: unknown): MemoryPayload {
     tags,
     supersededByUid: typeof p.supersededByUid === "string" && p.supersededByUid ? p.supersededByUid.slice(0, 200) : null,
     validTo: number(p.validTo, 0),
+    meta: validateMeta(p),
   };
+}
+
+const MEMORY_CLASS = new Set(["", "working", "durable"]);
+
+function validateMeta(p: Record<string, unknown>): MemoryPayload["meta"] {
+  const meta: MemoryPayload["meta"] = {};
+  if (typeof p.gitBranch === "string") meta.gitBranch = p.gitBranch.slice(0, 200);
+  if (typeof p.gitCommit === "string") meta.gitCommit = /^[0-9a-f]{0,64}$/i.test(p.gitCommit) ? p.gitCommit.toLowerCase() : "";
+  if (typeof p.memoryClass === "string") meta.memoryClass = MEMORY_CLASS.has(p.memoryClass) ? p.memoryClass : "";
+  if (p.expiresAt !== undefined) meta.expiresAt = Math.max(0, number(p.expiresAt, 0));
+  return meta;
+}
+
+const META_COLUMNS: Record<keyof MemoryPayload["meta"], string> = {
+  gitBranch: "git_branch",
+  gitCommit: "git_commit",
+  memoryClass: "memory_class",
+  expiresAt: "expires_at",
+};
+
+function applyMeta(memoryId: number, p: MemoryPayload): void {
+  const keys = Object.keys(p.meta) as Array<keyof MemoryPayload["meta"]>;
+  if (!keys.length) return;
+  getDb()
+    .prepare(`UPDATE memories SET ${keys.map((k) => `${META_COLUMNS[k]} = ?`).join(", ")} WHERE id = ?`)
+    .run(...keys.map((k) => p.meta[k] as string | number), memoryId);
 }
 
 function validateLink(value: unknown): LinkPayload {
@@ -431,11 +461,13 @@ export function applySyncBundle(bundle: SyncBundle): ApplyResult {
       reindexEntities(memoryId, payload.content);
       queueEmbeddingBackfill(memoryId);
       applySupersession(memoryId, payload);
+      applyMeta(memoryId, payload);
       recordEntityClock("memory", uid, op.hlc, "upsert");
       return true;
     }
 
     applySupersession(local.id, payload);
+    applyMeta(local.id, payload);
     const contentChanged = local.content !== payload.content;
     d.prepare(
       `UPDATE memories SET project_id = ?, kind = ?, content = ?, importance = ?, created_at = ?, source_tool = ?,
