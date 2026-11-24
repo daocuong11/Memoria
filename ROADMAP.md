@@ -5,39 +5,111 @@
 
 ---
 
-## ⏭ POSISI TERKINI (2026-11-23) — untuk melanjutkan kerja
-**Rilis terbaru: v0.16.3** (npm, MCP Registry, GitHub Releases, Glama, mcprush;
-landing https://memoria.xinzzu.web.id). Fase F0–F3, F1C, sync M1–M5, Tier 0
-(auto-triage tanpa approval manual), team brain, dan distribusi selesai. Detail
-per rilis ada di `CHANGELOG.md`; riwayat fase lama di bawah tetap sebagai konteks.
+## ⏭ POSISI TERKINI (2026-11-24) — fase kualitas v0.18
 
-**Backlog eksekusi (urut):**
-1. **Jurnal belajar mingguan** — pasangan error→fix per minggu (error apa,
-   perbaikannya, mana yang berulang), di atas `summary/weekly.ts`; dashboard +
-   digest mingguan.
-2. **Tombol Sync di dashboard** — Settings → Sync: daftar perangkat, rotate key,
-   revoke perangkat (CLI `sync devices|rotate|revoke` sudah ada).
-3. **Aturan noise per bahasa** — `NOISE_RULES` dipindah ke file data (`id`, `en`)
-   yang bisa ditambah komunitas.
-4. **Refactor** `store/db.ts`, `http.ts`, `web/app.js` per modul, semua test hijau.
-5. **i18n dashboard multi-bahasa** (kamus per bahasa, bukan hanya EN/ID) +
-   bagian Contributors di README.
-6. Rilis **v0.17.0** (bukan 0.16.x: Glama sudah memakai label 0.16.4).
-7. **Homebrew tap + winget** — menunggu izin pemilik (repo publik eksternal).
-8. **Code signing** macOS/Windows — menunggu keputusan biaya.
+**Rilis terbaru: v0.16.3.** Di `main` sudah siap untuk v0.17.0: jurnal belajar,
+tombol Sync (devices/rotate/revoke), file noise per bahasa, cakupan repo git,
+dedup hook CLAUDE.md, aturan Tier 0 yang diukur di data nyata.
 
-**Belum diuji di kondisi nyata:** parser Cursor Composer, keychain Linux/Windows,
-hook Claude Code di sesi live, import zip ChatGPT/Claude asli, Obsidian, build
-Mac Intel. Issue #65 dan #67 meminta bantuan komunitas.
+**Arah baru (2026-11-24):** fitur dibekukan; 3–4 minggu fokus ke **kualitas
+inti**. Dasarnya analisis di data nyata (read-only, label privat di
+`.eval-private/`): ketepatan memori yang otomatis aktif baru 41% (rentang 95%:
+25–59%), noise terbuang 70%; 19 dari 32 memori bagus tidak aktif sehingga
+recall hit@5 hanya 34%; todo opencode yang tertangkap 1% (1/92); jawaban
+`AskUserQuestion` diarsipkan sebagai noise; embedding 100% `hash-256-v1`
+(tidak semantik); definisi 9 tool MCP ≈1.600 token. Error→fix tanpa LLM layak
+(≈94% tepat) **asal kegagalan dibaca dari isi output** — 95% perintah build/test
+memakai pipe sehingga exit code tertutup.
 
-**Menunggu pihak luar:** PR awesome-mcp-servers #20035, up-for-grabs #6471.
-Issue `good first issue` terbuka: #66, #68, #79, #81, #82.
+### A. Aturan main
+1. Setiap PR kualitas mencantumkan angka sebelum/sesudah; angka tidak naik =
+   tidak di-merge. Test ikut di PR yang sama.
+2. **Dibekukan:** refactor `db.ts`/`http.ts`/`app.js`, i18n multi-bahasa,
+   bagian Contributors, Homebrew/winget, code signing, integrasi/fitur baru.
+   Graph 3D, Obsidian, webhook, team brain diberi label "experimental".
+3. **Fokus tool:** Claude Code + opencode (ada event terstruktur dan datanya).
+   Codex **ditunda, bukan dicoret** (butuh fixture); Gemini/Antigravity ditunda.
+4. Pengujian read-only / salinan DB; label & data turunan sesi hanya di
+   `.eval-private/`; contoh di repo ditulis ulang tanpa isi pribadi.
+5. **Kompatibilitas sync:** pakai jenis memori yang ada, metadata baru = kolom
+   opsional, event mentah tidak pernah di-sync, ada test bundle versi baru bisa
+   diterapkan versi lama.
+6. Promosi menunggu v0.18.0.
+7. Perkiraan 3–4 minggu, batas keras 4 minggu. Gerbang gagal → Memoria
+   diposisikan sebagai **alat serah terima kerja lintas tool**, README ikut.
+8. PR kontributor (#81/#82) di-merge duluan; kerja kita yang menyesuaikan.
+
+### B. Langkah (S = maintainer/agen, A = pemilik)
+
+**Minggu 0 — beres-beres & dasar ukur**
+1. Q0a ROADMAP/AGENTS diperbarui (dokumen ini). — S
+2. Q0b Catatan di issue #81/#82. — S
+3. Q0c Klaim README (EN/ID/HI) + landing dilunakkan; fitur non-inti "experimental". — S
+4. Q0d Rilis v0.17.0. — S, **A: "boleh rilis"**
+5. Q-eval1 Held-out diperbesar: ≥60 memori asli **dan ≥90 prediksi aktif** (rentang ≤ ±10 poin). — S
+6. Q-eval2 50 label acak dicek orang kedua. — **A** (±15 menit)
+7. Q-eval3 Query recall 32 → 50 (ID/EN, lintas bahasa); ukur kondisi (a) sekarang dan (b) promosi ideal. — S
+8. Q-eval4 Protokol uji serah terima 10 menit (Claude Code → opencode). — S tulis, **A jalankan**
+
+**Minggu 1 — capture yang benar**
+9. Q1 Perbaiki peran data lama (≥1.743 baris tool tercatat `user`), snapshot dulu, triage ulang. Target noise terbuang +5 poin.
+10. Q1.5 Retrieval inspector: log lokal (≤500 entri, diredaksi, tidak di-sync) + tab dashboard + "tandai tidak relevan".
+11. Q2-schema Migrasi v11: tabel lokal `session_events` (tidak di-sync); kolom opsional di `memories`: `source_event_id`, `git_branch`, **`git_commit`**, `memory_class` (`working`/`durable`), `expires_at`; test kompatibilitas bundle.
+12. Q2a Todo (`TodoWrite`/`Task*`/`update_plan`, opencode `todowrite`/`todo`) dengan status asli; jawaban pertanyaan bersubstansi → `decision`, persetujuan sesaat → working; judul `ai-title`/`session.title`, recap `wrap_up`. Target todo tertangkap ≥90%.
+13. Q2b Error→fix: allowlist verifier, gagal dari **isi output** (+exit code), normalisasi perintah, wajib baris error + file kode; verifier gagal di akhir sesi → task "belum beres"; file dari Edit/Write; commit `fix:`/`feat:`; branch + commit; redaksi stdout/stderr. Target ketepatan ≥90% (semua pasangan lolos filter ±46 + 20 yang ditolak).
+14. Q-backfill Proses ulang 28 sesi Claude + 52 sesi opencode, idempoten.
+
+**Minggu 2 — promosi yang bersih**
+15. Q3 Laporan penutup giliran = satu laporan `working` (tidak dipecah per kalimat); narasi tengah giliran dilewati; `fact` hanya dari ucapan user berentitas; ≤3 kandidat/giliran; penanda kuat ID/EN; ekstraksi ulang transkrip lama. Target noise terbuang ≥85%.
+16. Q4 Skor berbasis bukti (sumber, ditopang event, corroboration, file masih ada, penanda kuat, pernah dipakai) + **sinyal negatif** (`update_memory`, `forget`, arsip manual, tandai tidak relevan); kalibrasi regresi logistik offline. Target memori bagus terjangkau ≥26/32.
+17. **Gerbang** sampel buta baru: ketepatan ≥70%, noise terbuang ≥85%, memori tersimpan ≥90% (rentang ≤ ±10). — S, **A cek 30 label**
+
+**Minggu 3–4 — tahan lama, hemat, siap promosi**
+18. Q5 Lifecycle: `working` kedaluwarsa 3–7 hari / saat task selesai; `durable` decay bila tak dipakai; cek ke kode (path hilang → stale, churn sejak `git_commit` → mungkin usang, branch lain → turun sedikit); commit menutup task. Target memori basi disajikan <5%.
+19. Q6 Retensi: **arsip terkompresi lokal (bawaan)**, hapus permanen opsional; sesi terakhir per proyek utuh; entropi di redaksi.
+20. Q7 Mode tool lite (3 tool, <600 token); **batas token bawaan untuk semua tool** (`recall`, `project_context`, `build_context`, `file_context`, tetap bisa `maxChars`); susunan resume baru; penanda `(stale)`/`(maybe outdated)`/`(from event)`; cek pembacaan ulang file konteks di tengah sesi. Target token/sesi <1.200.
+21. Q8 Kesehatan capture per tool, isolasi parser, fixture jsonl + `opencode.db`; issue `help wanted` untuk fixture Codex.
+22. Q9a Embedding semantik: `nomic-embed-text` (Ollama) vs `multilingual-e5-small` in-process vs `all-MiniLM-L6-v2`. Target hit@5 (a) ≥70%, (b) ≥80%. — **A pilih model**
+23. Q9b LLM opsional: nilai draft ragu, padatkan laporan giliran, konsolidasi keputusan; fallback Tier 0. Target ketepatan ≥85%.
+24. Q9.5 `memoria doctor`, snapshot sebelum migrasi, checksum SHA256 di release, `PRIVACY.md`.
+25. Q10 Rilis v0.18.0 "Quality": README dengan angka gerbang + positioning (claude-mem, OpenMemory/mem0, Basic Memory, memori bawaan Claude Code) + siapa yang cocok/tidak. — **A: "boleh rilis"**
+
+**Sesudah v0.18:** usulan ADR (`docs/adr/`), export JSONL lewat CLI, filter &
+file konflik Obsidian, refactor, parser Codex/Gemini, i18n/Contributors/
+Homebrew/winget/code signing. **Tidak diambil:** grup proyek lintas repo, MCP
+Resources, parameter `feedback` di tool MCP, compaction tanpa LLM.
+
+### C. Target gerbang v0.18
+| Metrik | Sekarang | Target |
+|---|---|---|
+| Ketepatan memori aktif | 41% (25–59%) | ≥70% Tier 0, ≥85% + LLM |
+| Noise terbuang | 70% (62–77%) | ≥85% |
+| Memori asli tersimpan | 91% (73–98%) | ≥90% |
+| Memori bagus terjangkau | 13/32 | ≥26/32 |
+| Recall hit@5 (a) sekarang / (b) promosi ideal | 34% / 69% | ≥70% / ≥80% |
+| Todo tertangkap | 1% | ≥90% |
+| Ketepatan error→fix | ≈94% (sampel, belum diimplementasi) | ≥90% |
+| Memori basi disajikan | belum diukur | <5% |
+| Token per sesi (tool + resume) | ≈2.000 | <1.200 |
+| Kesehatan capture | belum ada | ada per tool |
+| Uji serah terima | baseline langkah 8 | tak ada task/keputusan aktif hilang |
+
+### D. Audit eksternal 24 poin (sudah dicek ke kode)
+Sudah ada: WAL+busy_timeout, supersede, dedupe saat tulis, redaksi secret,
+proteksi port lokal (token/Host/CORS), benchmark. Masuk rencana: embedding
+in-process (22), isolasi parser (21), doctor+snapshot (24), inspector (10),
+PRIVACY+checksum (24). Sebagian: branch/commit (11,13,18), decay (18), ekstraksi
+git (13,15), tool bloat & batas token & KV-cache (20), feedback (10,16).
+Ditunda: konflik/filter Obsidian, export JSONL. Tidak diambil: grup lintas repo.
+Tidak berlaku: loop CLAUDE.md, CPU watcher (watcher tidak memantau folder proyek).
 
 **Catatan lingkungan:** pengujian selalu terisolasi
 (`HOME=$(mktemp -d) MEMORIA_DATA_DIR=$(mktemp -d)`); DB asli `~/.memoria` hanya
-dipakai app. `npm run check:ui` = audit selector + struktur;
-`node scripts/bench-f1c.mjs` = benchmark search.
+dipakai app atau dibaca read-only (`file:…?mode=ro&immutable=1`). Ukur konteks:
+`node scripts/audit-context.mjs`. Eval privat: `.eval-private/` (git-ignored).
+
 ---
+
 ## 0. Ringkasan Eksekutif
 
 Memoria = second brain offline untuk semua AI coding tool. Rencana ini menyatukan:
