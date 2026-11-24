@@ -67,7 +67,7 @@ memakai pipe sehingga exit code tertutup.
 
 **Minggu 2 — promosi yang bersih**
 15. Q3 Laporan penutup giliran = satu laporan `working` (tidak dipecah per kalimat); narasi tengah giliran dilewati; `fact` hanya dari ucapan user berentitas; ≤3 kandidat/giliran; penanda kuat ID/EN; ekstraksi ulang transkrip lama. Target noise terbuang ≥85%. — **Selesai (ekstraksi ulang 90 sesi, label pemilik):** held-out v2 memori tersimpan 30,9% → **34,5%**, noise terbuang 91,2% → **94,8%**; held-out v1 26,1% → 26,1% / 92,9% → 96,1%; set penyetelan 20,8% → 18,8% (−1 item) / 93,1% → 95,6%. Laporan penutup giliran = memori `context` `working` (kedaluwarsa 3 hari). Asal 946 label: pesan akhir agen 32% layak, ringkasan lanjutan 27%, tengah giliran 15%, output tool 6%, user 3% → output tool tetap dilewati (opsi "sumber tool terbatas" ditolak dengan angka ini). Konfigurasi dipilih dari 8 varian dengan melihat held-out v2 → angka v2 sedikit optimis.
-16. Q4 Skor berbasis bukti (sumber, ditopang event, corroboration, file masih ada, penanda kuat, pernah dipakai) + **sinyal negatif** (`update_memory`, `forget`, arsip manual, tandai tidak relevan); kalibrasi regresi logistik offline. Target memori bagus terjangkau ≥26/32.
+16. Q4 Skor berbasis bukti (sumber, ditopang event, corroboration, file masih ada, penanda kuat, pernah dipakai) + **sinyal negatif** (`update_memory`, `forget`, arsip manual, tandai tidak relevan); kalibrasi regresi logistik offline. Target memori bagus terjangkau ≥26/32. — **Selesai (sebagian):** regresi logistik 22 fitur dilatih di set penyetelan (296 label), ambang dipilih di set itu saja; tanda "tidak relevan", dipakai agen, dan asal event jadi penyesuaian kecil (belum ada label). Held-out v2: ketepatan aktif 37,5% → **46,4%**, tersimpan 74,5% → **76,4%**, noise terbuang 80,4% → **81,8%**, memori asli aktif 15 → **32**/55. Held-out v1: 40,7% → 41,9%, tersimpan 91,3% → 87,0% (−1 item), noise 70,1% → 70,9%. Fixture sintetis: tersimpan 97,1% → 94,1% (≥90% tetap). Belum diukur: "memori bagus terjangkau x/32" (butuh promosi di DB salinan + eval recall).
 17. **Gerbang** sampel buta baru: ketepatan ≥70%, noise terbuang ≥85%, memori tersimpan ≥90% (rentang ≤ ±10). — S, **A cek 30 label**
     - **Revisi 2026-11-24 (disetujui pemilik):** target "memori tersimpan ≥90%" tidak tercapai oleh Tier 0 di label ini — 22% memori berlabel berasal dari output tool dan 13% dari tengah giliran (ekstraktor lama pun hanya 31% saat dijalankan ulang). Gerbang Tier 0 diukur dengan **ekstraksi ulang** (`.eval-private/reextract.mjs`) pada dua cakupan: (a) semua label, (b) label yang sumbernya pesan akhir agen / ringkasan lanjutan / user. Syarat Tier 0: noise terbuang ≥85% dan tersimpan (b) tidak turun dari baseline; target kualitas kalimat ≥70%/≥90% dipindah ke jalur LLM (langkah 23).
 
@@ -89,7 +89,7 @@ Resources, parameter `feedback` di tool MCP, compaction tanpa LLM.
 ### C. Target gerbang v0.17.0
 | Metrik | Sekarang | Target |
 |---|---|---|
-| Ketepatan memori aktif | 38% (24–53%), held-out v2 | ≥70% Tier 0, ≥85% + LLM |
+| Ketepatan memori aktif | 38% → **46%**, held-out v2 | ≥70% Tier 0, ≥85% + LLM |
 | Noise terbuang | 80% (77–84%), held-out v2 | ≥85% |
 | Memori asli tersimpan | 75% (62–84%), held-out v2 | ≥90% |
 | Memori bagus terjangkau | 13/32 | ≥26/32 |

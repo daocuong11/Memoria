@@ -11,6 +11,7 @@
  * lintas-AI bekerja instan; sisanya masuk draft untuk tinjau.
  * ----------------------------------------------------------------------------- */
 
+import { evidenceDecision, evidenceProbability, type RuntimeSignals } from "./evidence";
 import { noiseReason, letterRatio, wordCount } from "./noise";
 
 export const HASH_MODEL = "hash-256-v1";
@@ -191,6 +192,21 @@ export interface TriageResult {
   signals: string[];
   /** Alasan utama keputusan (noise:<rule>, low-score, …) — untuk UI & log. */
   reason: string;
+  /** Evidence probability (Q4), when the evidence layer decided. */
+  evidence?: number;
+}
+
+/** Tier 0 triage, then the evidence score (extract/evidence.ts) decides
+ * active / draft / archive. Noise rules still archive outright. */
+export function evidenceTriage(m: { kind: string; content: string; importance: number; confidence?: number; signal?: string[] }, rt: RuntimeSignals = {}): TriageResult {
+  const t = triageCandidate(m);
+  if (t.reason.startsWith("noise:")) return t;
+  const p = evidenceProbability({ kind: m.kind, content: m.content, triage: t }, rt);
+  let decision = evidenceDecision(p);
+  // An explicit checklist item is a task by construction: the score may
+  // keep it out of `active`, but not throw it away.
+  if (decision === "archive" && t.signals.some((x) => x === "checkbox_todo" || x === "checkbox_done")) decision = "draft";
+  return { ...t, decision, evidence: Number(p.toFixed(3)), reason: decision === "active" ? "evidence" : decision === "archive" ? "low-evidence" : "uncertain" };
 }
 
 const STRONG_SIGNALS = new Set(["decision", "error_fix", "checkbox_todo", "checkbox_done", "todo", "done"]);
@@ -278,13 +294,13 @@ export function assessHeuristicSignal(m: { kind: HeuristicKind; content: string;
 
 /** Pulihkan sinyal untuk memori tersimpan (sinyal asli tidak disimpan di DB):
  * klasifikasi ulang kalimatnya dengan aturan yang sama seperti saat ekstraksi. */
-export function rescoreStored(m: { kind: string; content: string; importance: number }): TriageResult {
+export function rescoreStored(m: { kind: string; content: string; importance: number }, rt: RuntimeSignals = {}): TriageResult {
   const content = m.content || "";
   const cb = /^\s*(?:[-*]|\d+[.)])?\s*\[( |x|X)\]/.exec(content);
   const cls = classifySentence(content);
   const signals = cb ? [cb[1] === " " ? "checkbox_todo" : "checkbox_done"] : cls ? cls.signals : [];
   const confidence = cls ? cls.confidence : 0.6;
-  return triageCandidate({ kind: m.kind, content, importance: m.importance, confidence, signal: signals });
+  return evidenceTriage({ kind: m.kind, content, importance: m.importance, confidence, signal: signals }, rt);
 }
 
 /* ---------------- Turn-aware extraction (quality phase Q3) ----------------

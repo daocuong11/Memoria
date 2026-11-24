@@ -1,7 +1,7 @@
 import { getDb, getPendingExtraction, markExtracted, projectSlugById, getBoolSetting } from "../store/db";
 import { getExtractProvider, getEmbedProvider, embedManyVia } from "./provider";
 import { addMemoryWithDedupe } from "./dedupe";
-import { triageCandidate } from "./heuristic";
+import { evidenceTriage } from "./heuristic";
 import { matchesUserNoise, userNoisePatterns } from "./triage";
 
 let running = false;
@@ -147,7 +147,7 @@ export async function extractQueue(force = false, opts: { order?: "asc" | "desc"
           if (heuristic) {
             // "Always archive drafts like this" patterns from the inbox.
             if (userPatterns.length && matchesUserNoise(mem.content, userPatterns)) return;
-            const t = triageCandidate(mem as any);
+            const t = evidenceTriage(mem as any);
             // archive = noise / skor rendah: tidak disimpan sama sekali
             // (transkrip asal tetap ada, bisa diekstrak ulang).
             if (t.decision === "archive") return;
