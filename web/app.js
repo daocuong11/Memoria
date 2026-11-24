@@ -1310,11 +1310,42 @@ async function renderRetrievals() {
     const d = await api("/api/retrievals?limit=100" + (src ? "&source=" + encodeURIComponent(src) : ""));
     if (!viewFresh(mark)) return;
     const st = d.stats || {};
-    $("#rtEnabled").checked = st.enabled !== false;
-    $("#rtStats").textContent = t("{0} logged calls · {1} with no result · {2} marked not relevant", st.entries || 0, st.emptyResults || 0, st.irrelevantMarks || 0);
+    const enabled = st.enabled !== false;
+    $("#rtEnabled").checked = enabled;
     const entries = d.entries || [];
+    const total = st.entries || 0;
+    // Nothing logged at all: no toolbar, no row of zeros — say what this page
+    // is for and what makes it fill up.
+    const toolbar = $("#rtSource").closest(".toolbar");
+    toolbar.style.display = total ? "" : "none";
+    const parts = [];
+    if (total) parts.push(t(total === 1 ? "1 call logged" : "{0} calls logged", total));
+    if (st.emptyResults) parts.push(t("{0} returned nothing", st.emptyResults));
+    if (st.irrelevantMarks) parts.push(t("{0} marked not relevant", st.irrelevantMarks));
+    $("#rtStats").textContent = parts.join(" · ");
+    $("#rtStats").style.display = parts.length ? "" : "none";
     if (!entries.length) {
-      box.innerHTML = emptyState(t("No retrievals yet"), t("Calls from your agents to recall, project_context, build_context and file_context show up here."));
+      if (!enabled) {
+        box.innerHTML = emptyState(
+          t("Logging is paused"),
+          t("Turn it on to see which memories your AI tools receive when they ask Memoria for context."),
+          `<button class="btn primary" id="rtTurnOn">${esc(t("Turn logging on"))}</button>`
+        );
+        toolbar.style.display = "";
+      } else if (total) {
+        box.innerHTML = emptyState(t("No calls from this tool"), t("Pick another tool in the filter, or choose All tools."));
+      } else {
+        box.innerHTML = emptyState(
+          t("Nothing has asked Memoria for context yet"),
+          t("When an AI tool you connected looks something up in Memoria, each lookup appears here with the memories it got, so you can see what it was told and mark anything that does not belong."),
+          `<button class="btn primary" id="rtConnect">${esc(t("Connect an AI tool"))}</button>`
+        );
+      }
+      $("#rtConnect")?.addEventListener("click", () => setView("integrations"));
+      $("#rtTurnOn")?.addEventListener("click", async () => {
+        await api("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: "retrievalLog", value: "1" }) });
+        renderRetrievals();
+      });
       return;
     }
     box.innerHTML = `<div class="list">${entries.map((e) => `
