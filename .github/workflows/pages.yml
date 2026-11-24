@@ -19,12 +19,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  build:
     if: vars.SITE_ENABLED == 'true'
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -58,5 +55,16 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ${{ env.SITE_OUT }}
+
+  # Separate job (GitHub's starter layout): deploying in the same job as the
+  # upload failed twice on 24 Nov with "No artifacts named github-pages" while
+  # the artifact existed.
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v4
