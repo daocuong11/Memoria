@@ -190,6 +190,11 @@ export async function extractQueue(force = false, opts: { order?: "asc" | "desc"
     // retry next cycle
   } finally {
     running = false;
+    try {
+      (await import("./expire")).retireExpired();
+    } catch {
+      /* lifecycle is best effort */
+    }
   }
   return extracted;
 }

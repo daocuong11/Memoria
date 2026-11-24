@@ -262,6 +262,12 @@ export async function generateResumePrompt(slug: string): Promise<string> {
 export async function generateHandoff(slug: string, opts: HandoffOptions = {}): Promise<string> {
   const proj = projectRecord(slug);
   if (!proj) return `# Handoff — ${slug}\n\n(No project data)`;
+  try {
+    // Expired working memories (old turn reports, todos) never reach a handoff.
+    (await import("./extract/expire")).retireExpired(Date.now(), { minIntervalMs: 60_000 });
+  } catch {
+    /* lifecycle is best effort */
+  }
 
   const lines: string[] = [];
   lines.push(`# Project handoff: ${proj.name || slug}`);
