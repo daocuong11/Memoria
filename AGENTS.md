@@ -18,23 +18,27 @@ ulang konteks.
 - `git log` — conventional commits; fitur via branch `feat/...`/`fix/...`/`chore/...`
   → PR ke `main` → tunggu check `verify` → merge commit (`--merge`, bukan squash).
 
-## Status (v0.16.3, 2026-11-22)
+## Status (main, 2026-11-24 — belum dirilis; rilis berikutnya v0.17.0)
 - Rilis terbaru: **v0.16.3**. Distribusi: npm `@xinzzu/memoria`, MCP Registry
-  `io.github.xinzzu/memoria`, Glama, mcprush, GitHub Releases (installer 3 OS),
-  landing page https://memoria.xinzzu.web.id (`site/`, GitHub Pages).
-- Selesai sejak v0.12: Tier 0 auto-triage + polish, redaksi secret, migrasi
-  v8/v9/v10 (`superseded_by`), token API lokal, secret CLI terenkripsi (keychain),
-  parser VS Code/Cursor, onboarding, hook Claude Code, import ChatGPT/Claude zip,
-  Obsidian dua arah, sync M5 (rotate/revoke/clock guard), team brain
-  (`.memoria/brain.md`), anotasi tool MCP, SDK MCP 1.32.2 (0 advisory produksi).
+  `io.github.xinzzu/memoria`, Glama, mcprush, GitHub Releases (installer 3 OS +
+  `SHA256SUMS.txt`), landing page https://memoria.xinzzu.web.id.
+- Fase kualitas (PR #102–#118) sudah di `main`: peran transkrip lama (v11),
+  retrieval inspector (v12), `session_events` + metadata memori (v13), todo /
+  pertanyaan / verifier / commit sebagai event, backfill, ekstraksi per giliran,
+  skor bukti, lifecycle, retensi + redaksi kunci (v14), tool lite, kesehatan
+  capture, `memoria doctor`, `PRIVACY.md`.
+- **Gerbang langkah 17 gagal untuk Tier 0** (ketepatan aktif 42%); keputusan
+  pemilik tertunda — lihat ROADMAP. Rilis menunggu keputusan itu + "boleh rilis".
 - Kontributor luar: @bhavana4123 (README Hindi), @StreamLine-18 (landing),
-  @jamesyshd19-cmyk (CLI unknown command).
+  @jamesyshd19-cmyk (CLI unknown command), @daocuong11 (komentar handoff.ts).
 
 ## Arsitektur singkat
 - `src/engine/` — inti (tsc, commonjs, output `dist/engine/`): `store/db.ts`
   (node:sqlite, WAL, migrasi `PRAGMA user_version`), `sync/`, `retrieve/`
   (FTS5 trigram + embedding + graph), `extract/` (heuristik/Ollama/OpenAI-compat,
-  triage, noise, supersede), `ingest/` (watcher + parser per tool), `handoff.ts`
+  triage, noise, supersede, `events.ts` event→memori, `evidence.ts` skor bukti,
+  `expire.ts` lifecycle), `ingest/` (watcher + parser per tool, `events.ts`
+  parsing event, `health.ts`, `backfill.ts`), `store/retention.ts`, `doctor.ts`, `handoff.ts`
   (blok resume ber-marker ke AGENTS/CLAUDE/GEMINI.md), `mcp/` (stdio + HTTP
   `/mcp`, 9 tool), `team/brain.ts`, `privacy/redact.ts`, `auth.ts`.
 - `web/` — dashboard vanilla JS (app.js + i18n.js); SSE live update.
@@ -59,7 +63,24 @@ ulang konteks.
 ## Gotcha
 - node:sqlite mengembalikan objek null-prototype — akses properti eksplisit.
 - `closeDb()` membersihkan memo id proyek; jangan cache id lintas handle DB.
-- Peran transkrip: `tool` = output tool (dilewati ekstraksi), `system` = meta.
+- Peran transkrip: `tool` = output tool (dilewati ekstraksi), `system` = meta
+  (ringkasan lanjutan sesi dibaca Tier 0). Baris Claude lama diperbaiki M11.
+- Tier 0 membaca **per giliran** (`heuristicExtract` dapat satu sesi utuh):
+  pesan agen di tengah giliran dilewati; pesan akhir → laporan giliran
+  `context`/`working` (kedaluwarsa 3 hari) + kandidat. Keputusan triage =
+  `evidenceTriage` (regresi logistik di `extract/evidence.ts`; bobot dilatih
+  offline dengan `.eval-private/q4-lr.mjs` — jangan setel di data held-out).
+- Memori `working` punya `expires_at`; `retireExpired()` jalan sebelum konteks
+  disajikan. Jangan menyajikan memori working tanpa lewat jalur itu.
+- Event terstruktur → `session_events` lewat `insertSessionEvent` (unik per
+  `(tool, session_id, source_ref)`, payload diredaksi per nilai), lalu
+  `materializeEvents` (kursor `eventsProcessedId`). Gagal/lulus verifier dibaca
+  dari **isi output**, bukan exit code.
+- Pengujian yang membaca sumber asli: panggil parser langsung (`scanClaude`,
+  `scanOpencode`, `backfillEvents`). **Jangan `scanAll` dengan HOME asli** —
+  sinyal limit menulis blok resume ke file proyek sungguhan.
+- Mode tool MCP: `MEMORIA_MCP_TOOLS=lite|full` atau setting `mcpTools`;
+  batas output bawaan di `DEFAULT_CAPS` (`mcp/server.ts`).
 - Aturan noise struktural (shell/kode/output tool) → `NOISE_RULES` di `extract/noise.ts`;
   obrolan agen per bahasa → frasa di `extract/noise-lang/<lang>.json` (bukan regex,
   daftarkan di `index.ts`). Tambah contoh di `tests/fixtures/heuristic-eval.json`
@@ -76,7 +97,7 @@ ulang konteks.
   nomor versi Glama bisa mendahului npm (ada 0.16.4 di Glama) — rilis berikutnya 0.17.0.
 
 ## Next
-**Fase kualitas v0.17.0 (fitur dibekukan).** Rencana lengkap 25 langkah, aturan
+**Fase kualitas v0.17.0 (fitur dibekukan) — sebagian besar selesai, gerbang gagal (lihat Status).** Rencana lengkap 25 langkah, aturan
 main, dan gerbang angka: `ROADMAP.md` → POSISI TERKINI. Ringkas:
 - Setiap PR kualitas wajib angka sebelum/sesudah (eval privat `.eval-private/`).
 - Fokus Claude Code + opencode; capture event terstruktur (todo, pertanyaan,

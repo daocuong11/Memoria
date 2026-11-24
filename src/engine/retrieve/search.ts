@@ -18,6 +18,8 @@ export interface SearchHit {
   superseded?: boolean;
   /** Names project files that no longer exist (lifecycle Q5). */
   stale?: boolean;
+  /** Built from a structured session event (todo, verifier run, commit). */
+  fromEvent?: boolean;
 }
 
 const STALE_FACTOR = 0.7;
@@ -197,6 +199,7 @@ export function searchMemories(
         // Superseded decisions stay searchable (history) but rank lower.
         score: (m.validTo || 0) > 0 ? score * 0.6 : score,
         superseded: (m.validTo || 0) > 0,
+        fromEvent: (m.sourceEventId || 0) > 0,
       });
     }
   }
