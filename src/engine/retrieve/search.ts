@@ -2,6 +2,7 @@ import { getDb, allMemories, projectSlugById, readMemories, Memory, projectRecor
 import { projectScopeIds } from "./scope";
 import { vecCandidates } from "../vecfind";
 import { cosine as vecCosine } from "../vecindex";
+import { isStale, retireExpired } from "../extract/expire";
 
 export interface SearchHit {
   id: number;
@@ -15,6 +16,25 @@ export interface SearchHit {
   /** Set when a newer decision about the same subject replaced this one
    * (valid_to closed while the memory is still active). */
   superseded?: boolean;
+  /** Names project files that no longer exist (lifecycle Q5). */
+  stale?: boolean;
+}
+
+const STALE_FACTOR = 0.7;
+
+/** Check the leading hits for missing files, rank stale ones lower. Only
+ * the top of the list is checked: it touches the file system. */
+function applyStaleness(hits: SearchHit[], limit: number): SearchHit[] {
+  const sorted = hits.sort((a, b) => b.score - a.score);
+  const head = sorted.slice(0, limit * 2);
+  for (const h of head) {
+    const root = h.projectSlug ? projectRecord(h.projectSlug)?.path : null;
+    if (h.kind !== "brief" && isStale(h.content, root)) {
+      h.stale = true;
+      h.score *= STALE_FACTOR;
+    }
+  }
+  return head.sort((a, b) => b.score - a.score).slice(0, limit);
 }
 
 function cosine(a: number[], b: number[]): number {
@@ -133,6 +153,7 @@ export function searchMemories(
   queryEmbedding?: number[] | null
 ): SearchHit[] {
   const limit = opts.limit ?? 10;
+  retireExpired(Date.now(), { minIntervalMs: 60_000 });
   // Kandidat dari FTS5; null (token kosong/query error) → scan legacy penuh,
   // jadi hasil tidak pernah lebih buruk dari implementasi lama.
   const memories = ftsCandidates(query, opts.kind) ?? allMemories();
@@ -179,7 +200,7 @@ export function searchMemories(
       });
     }
   }
-  const ranked = hits.sort((a, b) => b.score - a.score).slice(0, limit);
+  const ranked = applyStaleness(hits, limit);
   // audit: satu UPDATE batch, bukan per-hit
   const topIds = ranked.map((h) => h.id);
   if (topIds.length) {
@@ -224,6 +245,7 @@ export function touchMemories(ids: number[]): void {
 }
 
 export function projectContext(projectSlug: string, limit = 8): SearchHit[] {
+  retireExpired(Date.now(), { minIntervalMs: 60_000 });
   const memories = allMemories();
   const now = Date.now();
   const hits: SearchHit[] = [];
@@ -250,7 +272,7 @@ export function projectContext(projectSlug: string, limit = 8): SearchHit[] {
       score,
     });
   }
-  const ranked = hits.sort((a, b) => b.score - a.score).slice(0, limit);
+  const ranked = applyStaleness(hits, limit);
   // A4: project brief SELALU pertama — inti dari "core memory" per proyek.
   const proj = projectRecord(projectSlug);
   const brief = proj ? getProjectBrief(proj.id) : null;

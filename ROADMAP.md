@@ -72,7 +72,7 @@ memakai pipe sehingga exit code tertutup.
     - **Revisi 2026-11-24 (disetujui pemilik):** target "memori tersimpan ≥90%" tidak tercapai oleh Tier 0 di label ini — 22% memori berlabel berasal dari output tool dan 13% dari tengah giliran (ekstraktor lama pun hanya 31% saat dijalankan ulang). Gerbang Tier 0 diukur dengan **ekstraksi ulang** (`.eval-private/reextract.mjs`) pada dua cakupan: (a) semua label, (b) label yang sumbernya pesan akhir agen / ringkasan lanjutan / user. Syarat Tier 0: noise terbuang ≥85% dan tersimpan (b) tidak turun dari baseline; target kualitas kalimat ≥70%/≥90% dipindah ke jalur LLM (langkah 23).
 
 **Minggu 3–4 — tahan lama, hemat, siap promosi**
-18. Q5 Lifecycle: `working` kedaluwarsa 3–7 hari / saat task selesai; `durable` decay bila tak dipakai; cek ke kode (path hilang → stale, churn sejak `git_commit` → mungkin usang, branch lain → turun sedikit); commit menutup task. Target memori basi disajikan <5%.
+18. Q5 Lifecycle: `working` kedaluwarsa 3–7 hari / saat task selesai; `durable` decay bila tak dipakai; cek ke kode (path hilang → stale, churn sejak `git_commit` → mungkin usang, branch lain → turun sedikit); commit menutup task. Target memori basi disajikan <5%. — **Selesai (sebagian):** memori `working` kedaluwarsa diarsipkan sebelum konteks disajikan (satu batch, bisa di-undo); memori yang menyebut file proyek yang semuanya sudah hilang ditandai `stale` dan peringkatnya ×0,7. Di salinan DB nyata (121 proyek, `project_context` top 10): **basi disajikan 16,9% → 1,7%**. Belum: cek churn sejak `git_commit`, turun peringkat untuk branch lain, commit menutup task (data branch/commit baru ada untuk sesi baru).
 19. Q6 Retensi: **arsip terkompresi lokal (bawaan)**, hapus permanen opsional; sesi terakhir per proyek utuh; entropi di redaksi.
 20. Q7 Mode tool lite (3 tool, <600 token); **batas token bawaan untuk semua tool** (`recall`, `project_context`, `build_context`, `file_context`, tetap bisa `maxChars`); susunan resume baru; penanda `(stale)`/`(maybe outdated)`/`(from event)`; cek pembacaan ulang file konteks di tengah sesi. Target token/sesi <1.200.
 21. Q8 Kesehatan capture per tool, isolasi parser, fixture jsonl + `opencode.db`; issue `help wanted` untuk fixture Codex.
@@ -96,7 +96,7 @@ Resources, parameter `feedback` di tool MCP, compaction tanpa LLM.
 | Recall hit@5 (a) sekarang / (b) promosi ideal | 26% / 72% (50 query) | ≥70% / ≥80% |
 | Todo tertangkap | 0,2% → **100%** (548 item) | ≥90% |
 | Ketepatan error→fix | 31% heuristik → **50/50 pasangan masuk akal** (penilaian agen) | ≥90% |
-| Memori basi disajikan | belum diukur | <5% |
+| Memori basi disajikan | 16,9% → **1,7%** | <5% |
 | Token per sesi (tool + resume) | ≈2.000 | <1.200 |
 | Kesehatan capture | belum ada | ada per tool |
 | Uji serah terima | baseline langkah 8 | tak ada task/keputusan aktif hilang |

@@ -54,6 +54,11 @@ seluruh temuan high/medium penting diperbaiki di rilis ini.
 - **Old Claude Code tool output no longer counts as something you said.** Before v0.12 every tool result (file reads, shell output, edit receipts) was stored with role `user`. Migration v11 re-labels those rows as `tool` or `system` from their text, in Claude sessions written by the old parser only. Checked against 8,068 rows whose original jsonl still exists: 96.9% of tool output leaves `user`, 96.9% of typed messages stay `user`, and rows labelled `user` went from 21% to 85% correct. The session's "last user request" in snapshots was right in 5 of 15 labelled sessions before and 13 of 14 after; 8 of 78 automatic task closures came only from tool output and no longer happen.
 - **Snapshot before migrations.** When a schema migration is pending, the database is first copied to `backups/memory-pre-v<N>-<time>.db` with `VACUUM INTO`.
 
+### Memory lifecycle
+- **Expired working memories are retired before anything is served.** Turn reports, todos, short approvals and still-failing tasks carry an expiry. Once it passes they are archived as one triage batch (`maintain triage --undo` restores them), and this runs before `recall`, `project_context`, `build_context` and handoffs, not only on the background schedule.
+- **Stale memories are marked.** A memory that names project files, none of which exist any more, ranks lower and `recall` labels it "stale: the files it names are gone". It is not archived, because the file may have moved.
+- On a copy of a real library (121 projects, top 10 of `project_context`): expired or stale memories served went from 16.9% to 1.7%.
+
 ### Tier 0 reads sessions turn by turn
 - **One turn report instead of sentence fragments.** A turn is a user message plus everything the agent does until the next one. The agent's final message of a turn becomes one short-lived `working` memory (kind `context`, code and tables removed, about 600 characters, served for three days), plus up to 20 candidates from its sentences and lists.
 - **Mid-turn narration and tool output are skipped.** From user messages, only stated rules ("jangan …", "always …"), checklists and lines that label themselves ("TODO: …", "Keputusan: …") are taken. Session-continuation summaries are read like a report.
