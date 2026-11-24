@@ -199,7 +199,7 @@ function setView(name) {
   if (name === "tasks") renderTasks();
   if (name === "retrievals") renderRetrievals();
   if (name === "integrations") renderIntegrations();
-  if (name === "settings") { renderSettings(); loadSettingsToggles(); loadBackups(); loadSyncStatus(); loadSyncDevices(); }
+  if (name === "settings") { renderSettings(); loadSettingsToggles(); loadBackups(); loadSyncStatus(); loadSyncDevices(); loadCaptureHealth(); }
 }
 
 /* Kartu Overview: berapa konteks yang dikirim ke agen dan berapa yang dihemat
@@ -1271,6 +1271,28 @@ async function renderTimeline() {
     box.innerHTML = html;
   } catch (e) {
     box.innerHTML = emptyState(t("Failed to load"), esc(e.message));
+  }
+}
+
+/* ---------- Capture health ---------- */
+async function loadCaptureHealth() {
+  const box = $("#healthBox");
+  if (!box) return;
+  try {
+    const d = await api("/api/capture-health");
+    const label = { ok: t("OK"), behind: t("Behind"), error: t("Error"), idle: t("No sessions yet"), missing: t("Not found"), disabled: t("Off") };
+    const color = { ok: "var(--green)", behind: "var(--amber)", error: "var(--red)" };
+    box.innerHTML = (d.tools || [])
+      .map((h) => `<div class="mem-meta" style="padding:4px 0">
+        <span class="mem-kind" style="${color[h.status] ? `color:${color[h.status]}` : "opacity:.6"}">${esc(label[h.status] || h.status)}</span>
+        <span>${esc(h.label)}</span>
+        ${h.lastStoredAt ? `<span class="sep">·</span><span>${esc(t("last stored {0}", fmtRel(h.lastStoredAt)))}</span>` : ""}
+        ${h.stored7d || h.events7d ? `<span class="sep">·</span><span>${esc(t("7d: {0} messages, {1} events", h.stored7d, h.events7d))}</span>` : ""}
+        ${h.reason ? `<span class="sep">·</span><span class="muted">${esc(h.reason)}</span>` : ""}
+      </div>`)
+      .join("");
+  } catch (e) {
+    box.innerHTML = `<p class="muted">${esc(e.message)}</p>`;
   }
 }
 
