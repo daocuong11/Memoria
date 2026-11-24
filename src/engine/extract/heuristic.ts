@@ -65,6 +65,8 @@ export interface HeuristicMemory {
   /** 0..1 — dipakai untuk auto-activate fast-path (kontinuitas limit-hopping). */
   confidence?: number;
   signal?: string[];
+  /** 'working' = short-lived (a turn report); '' or 'durable' otherwise. */
+  memoryClass?: "working" | "durable";
 }
 
 interface Rule {
@@ -285,61 +287,131 @@ export function rescoreStored(m: { kind: string; content: string; importance: nu
   return triageCandidate({ kind: m.kind, content, importance: m.importance, confidence, signal: signals });
 }
 
+/* ---------------- Turn-aware extraction (quality phase Q3) ----------------
+ * A turn is one user message plus everything the agent does until the next
+ * user message. Where the owner's labelled memories came from (946 labels):
+ * the agent's final message of a turn 32% worth keeping, a continuation
+ * summary 27%, a mid-turn agent message 15%, tool output 6%, user messages
+ * 3%. So:
+ * - mid-turn agent messages and tool output are skipped;
+ * - the final agent message gives one `working` turn report plus up to
+ *   MAX_PER_TURN candidates;
+ * - from user messages only stated rules (preferences), checklists and lines
+ *   that label themselves ("TODO: …", "Keputusan: …") are taken;
+ * - a session-continuation summary (role system) is read like a report. */
+
+const MAX_PER_TURN = 20;
+const REPORT_MAX = 600;
+/** A user line that labels itself: "TODO: …", "Keputusan: …". */
+const USER_MARKED = /^\s*(?:todo|to-do|fixme|keputusan|decision|catatan|note)\s*:/i;
+const CONTINUATION = /^This session is being continued from a previous conversation/;
+
+/** The agent's final message, condensed: code blocks and tables dropped,
+ * markdown markers removed, cut at a sentence end near REPORT_MAX. */
+export function turnReport(text: string): string {
+  let t = String(text || "")
+    .replace(/```[\s\S]*?```/g, " ")
+    .split("\n")
+    .filter((l) => !/^\s*\|/.test(l) && !/^\s*[-=]{3,}\s*$/.test(l))
+    .map((l) => l.replace(/^\s*#{1,6}\s+/, "").replace(/\*\*|__/g, "").trim())
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (t.length > REPORT_MAX) {
+    const cut = t.slice(0, REPORT_MAX);
+    const end = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
+    t = (end > REPORT_MAX * 0.5 ? cut.slice(0, end + 1) : cut.trimEnd() + "…").trim();
+  }
+  return t;
+}
+
+function candidatesFrom(text: string, fromUser: boolean): HeuristicMemory[] {
+  const out: HeuristicMemory[] = [];
+  const bias = fromUser ? 0.08 : 0;
+  const tag = (sig: string[] | undefined): string[] => (fromUser ? [...(sig || []), "user"] : [...(sig || [])]);
+  for (const item of extractListItems(text))
+    out.push({ kind: item.kind, content: item.content, importance: Math.min(0.85, item.importance + bias), confidence: Math.min(0.98, item.confidence + bias), signal: tag(item.signals) });
+  for (const sentence of splitSentences(text)) {
+    const hit = classifySentence(sentence);
+    if (!hit) continue;
+    out.push({ kind: hit.kind, content: sentence, importance: Math.min(0.85, hit.importance + bias), confidence: Math.min(0.98, hit.confidence + bias), signal: tag(hit.signals) });
+  }
+  for (const m of extractCodeSignals(text))
+    out.push({ ...m, importance: Math.min(0.8, (m.importance || 0.5) + bias), confidence: Math.min(0.95, (m.confidence || 0.6) + bias), signal: tag(m.signal) });
+  return out;
+}
+
 /**
- * Ekstraksi tanpa LLM: kalimat + list/todo + sinyal kode. Pesan user dibobot
- * sedikit lebih tinggi. Hasil diprioritaskan (sinyal kuat dulu) dan dibatasi
- * agar tidak membanjiri, namun cukup kaya untuk kontinuitas limit-hopping.
+ * Tier 0 extraction without an LLM, turn by turn (see above). `conversation`
+ * is one session in time order; roles: user | assistant | tool | system.
  */
 export function heuristicExtract(conversation: Array<{ role: string; content: string }>): HeuristicMemory[] {
   const collected: HeuristicMemory[] = [];
   const seen = new Set<string>();
-
-  const push = (m: HeuristicMemory) => {
+  const accept = (m: HeuristicMemory): HeuristicMemory | null => {
     const content = normalizeContent(m.content || "");
-    if (content.length < 15 || content.length > 360) return;
-    if (GENERIC_RE.test(content)) return;
-    // Buang noise SEBELUM kuota kandidat terisi — dulu baris shell/echo tool
-    // menghabiskan slot dan lolos sebagai draft.
-    if (noiseReason(content)) return;
+    if (content.length < 15 || content.length > 360) return null;
+    if (GENERIC_RE.test(content) || noiseReason(content)) return null;
     const key = dedupeKey(content);
-    if (!key || seen.has(key)) return;
-    seen.add(key);
-    collected.push({ ...m, content });
+    if (!key || seen.has(key)) return null;
+    return { ...m, content };
+  };
+  const keep = (list: HeuristicMemory[], limit: number): void => {
+    const ok = list
+      .map(accept)
+      .filter((m): m is HeuristicMemory => !!m)
+      .map((m) => ({ m, s: triageCandidate(m).score, r: scoreForRank(m) }));
+    ok.sort((a, b) => b.s - a.s || b.r - a.r);
+    for (const { m } of ok.slice(0, limit)) {
+      seen.add(dedupeKey(m.content));
+      collected.push(m);
+    }
   };
 
-  for (const msg of conversation) {
+  // Index of the last agent message before each user message (or the end).
+  const finals = new Set<number>();
+  let lastAgent = -1;
+  conversation.forEach((m, i) => {
+    if (m.role === "user") {
+      if (lastAgent >= 0) finals.add(lastAgent);
+      lastAgent = -1;
+    } else if (m.role === "assistant") lastAgent = i;
+  });
+  if (lastAgent >= 0) finals.add(lastAgent);
+
+  conversation.forEach((msg, i) => {
     const text = msg.content || "";
-    if (!text.trim()) continue;
-    // Output tool (tool_result) bukan sumber memori: isinya listing/log mesin.
-    if (msg.role === "tool") continue;
-    const fromUser = msg.role === "user";
-    const bias = fromUser ? 0.08 : 0;
-    const tagUser = (sig: string[] | undefined) => (fromUser ? [...(sig || []), "user"] : sig);
-
-    // 1) List/checkbox/todo terstruktur (sinyal sangat berguna untuk resume)
-    for (const item of extractListItems(text)) {
-      push({ kind: item.kind, content: item.content, importance: Math.min(0.85, item.importance + bias), confidence: Math.min(0.98, item.confidence + bias), signal: tagUser(item.signals) });
+    if (!text.trim() || msg.role === "tool") return;
+    if (msg.role === "user") {
+      // On the owner's labels only 3% of candidates from user messages were
+      // worth keeping; a stated rule ("jangan …", "always …") is the exception.
+      const userCands = candidatesFrom(text, true);
+      keep(userCands.filter((m) => m.kind === "preference" || USER_MARKED.test(m.content) || (m.signal || []).some((x) => x.startsWith("checkbox_"))), MAX_PER_TURN);
+      return;
     }
-
-    // 2) Kalimat berpola
-    for (const sentence of splitSentences(text)) {
-      const hit = classifySentence(sentence);
-      if (!hit) continue;
-      push({ kind: hit.kind, content: sentence, importance: Math.min(0.85, hit.importance + bias), confidence: Math.min(0.98, hit.confidence + bias), signal: tagUser(hit.signals) });
+    const continuation = msg.role === "system" && CONTINUATION.test(text);
+    if (msg.role === "system" && !continuation) return;
+    if (msg.role === "assistant" && !finals.has(i)) {
+      return; // mid-turn narration
     }
-
-    // 3) Sinyal dari blok kode (command/error/fix hint)
-    for (const m of extractCodeSignals(text)) {
-      push({ ...m, importance: Math.min(0.8, (m.importance || 0.5) + bias), confidence: Math.min(0.95, (m.confidence || 0.6) + bias), signal: tagUser(m.signal) });
+    const before = collected.length;
+    keep(candidatesFrom(text, false), continuation ? 12 : MAX_PER_TURN);
+    if (!continuation) {
+      const report = turnReport(text);
+      // A one-line message is already its own candidate; no report then.
+      const same = collected.slice(before).some((m) => dedupeKey(m.content) === dedupeKey(report));
+      if (!same && report.length >= 40 && !noiseReason(report) && !GENERIC_RE.test(report)) {
+        const key = "report:" + dedupeKey(report);
+        if (!seen.has(key)) {
+          seen.add(key);
+          collected.push({ kind: "context", content: report, importance: 0.45, confidence: 0.7, signal: ["turn_report"], memoryClass: "working" });
+        }
+      }
     }
-  }
-
-  // Prioritaskan sinyal kuat & relevan limit-hopping, lalu batasi.
-  collected.sort((a, b) => scoreForRank(b) - scoreForRank(a));
-  return collected.slice(0, 16);
+  });
+  return collected;
 }
-
-
 
 /** Kompatibilitas: `maintain heuristic-promote` kini menjalankan auto-triage
  * penuh (promote + archive noise/duplikat/expired, tercatat & bisa di-undo). */
