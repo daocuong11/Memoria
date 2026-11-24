@@ -7,6 +7,10 @@
  * key=value untuk nama variabel sensitif + blok <private>…</private> yang
  * ditandai user. Sengaja TIDAK memakai deteksi entropi murni: hash commit,
  * UUID, dan alamat publik terlalu sering jadi false positive di sesi coding.
+ * Diukur ulang (2026-11-24) pada salinan DB nyata: dari 256 token
+ * ber-entropi tinggi, praktis semuanya alamat Solana/EVM publik, signature
+ * transaksi, nama modul CSS, atau SVG base64 — tidak dipakai. Yang lolos
+ * justru 26 private key hex 32-byte berlabel → aturan hex-private-key.
  * ------------------------------------------------------------------------- */
 
 export interface RedactResult {
@@ -44,6 +48,16 @@ const RULES: SecretRule[] = [
   { name: "conn-password", re: /\b((?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|redis|rediss|amqps?|mssql):\/\/[^:\s/@]+:)([^@\s]{3,})(@)/gi, group: 2 },
   // Bearer token di header
   { name: "bearer", re: /\b(Authorization:\s*Bearer\s+)([A-Za-z0-9._~+/=-]{16,})/gi, group: 2 },
+  // 32-byte hex key next to a label that says what it is: `Private key: 0x…`,
+  // `process.env.PRIVATE_KEY || '0x…'`, `privateKeyToAccount("0x…")`. Bare
+  // 64-hex strings are mostly transaction hashes, so the label is required.
+  {
+    name: "hex-private-key",
+    re: /((?:private[_ -]?key|privateKey\w*|secret[_ -]?key|signer[_ -]?key|deployer[_ -]?key|mnemonic)[^\n]{0,40}?)((?:0x)?[0-9a-fA-F]{64})(?![0-9a-fA-F])/gi,
+    group: 2,
+  },
+  // Solana / ed25519 keypair file: a JSON array of exactly 64 bytes.
+  { name: "keypair-bytes", re: /\[\s*(?:\d{1,3}\s*,\s*){63}\d{1,3}\s*\]/g },
   // NAMA_SENSITIF=nilai / "apiKey": "nilai" / password: nilai
   {
     name: "secret-assignment",

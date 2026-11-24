@@ -36,7 +36,7 @@ test("migrasi v0 → v7: FTS backfill + embedding BLOB + sync UID/outbox/ledger"
   const d = dbmod.initDb(dir);
 
   const uv = Number(d.prepare("PRAGMA user_version").get().user_version);
-  assert.equal(uv, 13, "user_version harus naik ke jumlah migrasi");
+  assert.equal(uv, 14, "user_version harus naik ke jumlah migrasi");
 
   // Embedding lama terbaca sebagai vektor & tersimpan BLOB di disk.
   const m = dbmod.allMemories().find((x) => x.content === "memori lama format json legacyq");
@@ -52,7 +52,7 @@ test("migrasi v0 → v7: FTS backfill + embedding BLOB + sync UID/outbox/ledger"
   // Migrasi idempotent: initDb ulang pada dir yang sama tidak mengubah apa pun.
   const d2 = dbmod.initDb(dir);
   const uv2 = Number(d2.prepare("PRAGMA user_version").get().user_version);
-  assert.equal(uv2, 13);
+  assert.equal(uv2, 14);
   const t2 = d2.prepare("SELECT typeof(embedding) AS t FROM memories WHERE id = ?").get(m.id);
   assert.equal(t2.t, "blob", "baris BLOB tidak boleh tersentuh ulang");
   assert.ok(dbmod.isBundleApplied === undefined || typeof dbmod.isBundleApplied === "function");
