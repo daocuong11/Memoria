@@ -92,7 +92,7 @@
         <ul>
           <li><strong data-count="9">9</strong><span>tools captured</span></li>
           <li><strong data-count="12">12</strong><span>MCP clients, one-click setup</span></li>
-          <li><strong>92.8&ndash;100%</strong><span>hit@5 retrieval, zero LLM calls</span></li>
+          <li><strong>100%</strong><span>agent todos captured with their real status</span></li>
           <li><strong>0</strong><span>accounts or cloud services required</span></li>
         </ul>
       </div>
@@ -153,7 +153,7 @@
           </li>
           <li>
             <h3>Extract</h3>
-            <p>Transcripts become memories: facts, decisions, tasks and fixed errors. This works with no model at all, and gets sharper if you add Ollama.</p>
+            <p>Sessions become structured memories: the agent&rsquo;s todos with their real status, your answers to its questions, build errors and the edits that fixed them, and commits. No model needed. Free-form sentences stay drafts you can search; add Ollama for clean sentence extraction.</p>
           </li>
           <li>
             <h3>Recall</h3>
@@ -255,7 +255,7 @@
           </div>
           <div class="card">
             <h3>Hybrid retrieval</h3>
-            <p>FTS5 keyword search, embeddings and graph centrality, tolerant of typos. hit@5 of 92.8&ndash;100% on a reproducible benchmark, with no LLM calls.</p>
+            <p>FTS5 keyword search, embeddings and graph centrality, tolerant of typos. hit@5 of 92.8&ndash;100% on a synthetic benchmark and 55% on held-out real memories, with no LLM calls.</p>
           </div>
           <div class="card">
             <h3>Pre-limit snapshots</h3>
@@ -340,7 +340,7 @@
             <h3>Local by default</h3>
             <ul>
               <li>Capture, extraction and search run on your computer, in <code>~/.memoria</code>.</li>
-              <li>Works with no model at all. Ollama is an optional upgrade.</li>
+              <li>Works with no model at all for structured capture and resume. Ollama is the upgrade for clean sentence extraction.</li>
               <li>Nothing leaves your machine unless you opt in: an OpenAI-compatible endpoint, webhook notifications, or encrypted sync.</li>
               <li>API keys, tokens, private keys and passwords are redacted before anything is stored.</li>
             </ul>

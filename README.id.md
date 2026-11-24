@@ -18,7 +18,7 @@ Tanpa cloud. Tanpa akun. Tidak ada data yang keluar dari komputer Anda.
 ![Electron](https://img.shields.io/badge/Electron-37-47848f)
 ![Inference](https://img.shields.io/badge/inference-opsional%20%28Ollama%20%2F%20OpenAI%20compat%29-529fff)
 ![Data](https://img.shields.io/badge/data-100%25%20lokal-4cc38a)
-![Status](https://img.shields.io/badge/status-0.16.3--beta-7f6eff)
+![Status](https://img.shields.io/badge/status-0.17.0--beta-7f6eff)
 [![Release](https://img.shields.io/github/v/release/xinzzu/Memoria?label=Release)](https://github.com/xinzzu/Memoria/releases)
 [![Build](https://github.com/xinzzu/Memoria/actions/workflows/build.yml/badge.svg?label=Build)](https://github.com/xinzzu/Memoria/actions)
 [![License](https://img.shields.io/github/license/xinzzu/Memoria)](LICENSE)
@@ -48,8 +48,10 @@ Setiap tool AI punya amnesia jangka pendek. Claude tidak ingat sesi kemarin. Cod
 keputusan "grid 12 kolom" yang Anda sepakati di Gemini CLI. Dan saat limit habis di tengah
 pekerjaan lalu pindah ke tool lain, Anda menjelaskan semuanya dari nol.
 
-**Memoria menutup celah itu.** Ia mengawasi sesi AI tool Anda, mengekstrak hal penting — fakta,
-keputusan, tugas, error-fix — lalu menyalurkannya ke sesi berikutnya, di tool apa pun, otomatis.
+**Memoria menutup celah itu.** Ia mengawasi sesi AI tool Anda dan menyimpan apa yang benar-benar
+tercatat di sana: daftar todo agen beserta statusnya, pertanyaan agen dan jawaban Anda, error
+build/test beserta edit yang memperbaikinya, commit, dan laporan agen di akhir tiap giliran. Semua
+itu disalurkan ke sesi berikutnya, di tool apa pun, otomatis.
 
 Dibuat untuk alur **limit-hopping**: limit habis jam 14:30, buka tool lain jam 14:31 — tool baru
 sudah tahu Anda sedang mengerjakan apa.
@@ -122,16 +124,38 @@ flowchart TB
 | 🧩 **MCP bridge — satu URL, semua tool** | MCP over HTTP di `http://127.0.0.1:48210/mcp` + registrasi satu klik ke 12 klien (Claude Code/Desktop, Codex, Gemini, opencode, Copilot CLI, Antigravity, Cursor, Windsurf, VS Code, Cline, Zed) |
 | 🤖 **Memori yang bisa dikurasi agen** | 9 tool MCP: `recall` (scope proyek + budget token), `remember` (keputusan ADD/UPDATE/NOOP), `update_memory`, `forget`, `build_context`, `file_context` (apa yang diketahui tentang sebuah file sebelum diedit) |
 | ✅ **Tab Tasks** | Semua janji/tugas dari sesi AI dalam satu checklist |
-| 🧠 **Tiered intelligence** | Jalan **tanpa model** (heuristik + triage otomatis, tanpa approval manual), dengan Ollama, atau endpoint OpenAI-compatible (LM Studio, llama.cpp, vLLM, cloud — opt-in) |
-| 🔍 **Retrieval hibrid** | Keyword (FTS5 trigram) + embedding + graph centrality, toleran typo — terukur pada benchmark reproducible: **hit@5 92.8–100%** tanpa satu pun panggilan LLM |
+| 🧾 **Capture terstruktur** | Claude Code dan opencode: daftar todo, jawaban pertanyaan, hasil build/test yang dibaca dari **isi output**, edit file, dan commit menjadi memori dengan status aslinya — tanpa model |
+| 🧠 **Tiered intelligence** | Jalan **tanpa model**: capture terstruktur + ekstraksi kalimat berbasis aturan. Kalimat hasil aturan tetap draft yang bisa dicari `recall`; yang disajikan otomatis hanya bukti terstruktur. Model Ollama atau OpenAI-compatible (opt-in) memberi ekstraksi kalimat yang bersih |
+| 🔍 **Retrieval hibrid** | Keyword (FTS5 trigram) + embedding + graph centrality, toleran typo — terukur pada benchmark sintetis reproducible: **hit@5 92.8–100%** tanpa satu pun panggilan LLM (55% pada memori asli held-out, lihat di bawah) |
 | 🧹 **Membersihkan diri** | Konsolidasi harian menggabungkan near-duplicate; filter noise menjaga inbox tetap jujur; bersih-bersih satu klik |
-| 🕸️ **Graph memori** | True 3D force graph: label prioritas degree dengan anti-overlap, fokus tetangga, zoom & pan |
+| 🕸️ **Graph memori** *(eksperimental)* | True 3D force graph: label prioritas degree dengan anti-overlap, fokus tetangga, zoom & pan |
 | 📋 **Tasks & timeline** | Aktivitas per proyek + riwayat git + digest mingguan |
 | 🔎 **Palette global** | Cari & salin memori dari mana saja; hotkey quick-note |
 | 🔐 **Sync terenkripsi (opsional)** | Bundle `.memsync` E2E antar perangkat — manual atau folder bersama (Dropbox/iCloud/Syncthing/jaringan), tanpa server/embedding/secret/transkrip |
-| 🔔 **Webhook & notifikasi** | Alert opt-in ke Discord, Telegram, atau webhook JSON generik (digest, scan, approval, draft) |
+| 🔔 **Webhook & notifikasi** *(eksperimental)* | Alert opt-in ke Discord, Telegram, atau webhook JSON generik (digest, scan, approval, draft) |
 | 🌐 **UI EN/ID** | English default, Bahasa Indonesia satu klik |
 | 💾 **Backup & ekspor/impor** | Auto-backup (10 terakhir, WAL-safe), restore, ekspor Markdown / JSON / Obsidian vault — dan impor seluruh folder catatan kembali |
+
+## Hasil terukur (v0.17.0)
+
+Diukur pada pustaka nyata milik maintainer (sekitar 90 sesi Claude Code / opencode / Gemini,
+sebagian besar berbahasa Indonesia). Kebenaran untuk todo diambil dari file sesi mentah. Label
+lainnya dibuat secara buta oleh asisten AI (hanya dari isi, tanpa melihat keputusan pipeline)
+dan belum diverifikasi independen, jadi anggap sebagai perkiraan.
+
+| | Sebelum | v0.17.0 |
+|---|---|---|
+| Item todo agen tertangkap dengan status benar (548) | 0,2% | **100%** |
+| Keputusan asli dari jawaban pertanyaan yang tertangkap (58) | 2 | **56** |
+| Ketepatan yang disajikan ke agen tanpa diminta (resume, `project_context`) | 42% (kalimat berbasis aturan) | **96%** (bukti terstruktur; 81% tanpa todo) |
+| `recall` hit@5 pada memori asli held-out | 24% | **55%** |
+| Memori kedaluwarsa/basi di `project_context` | 16,9% | **1,7%** |
+| Definisi tool + blok resume per sesi (mode lite) | ≈1.960 token | **≈730** |
+
+Yang tidak bisa tanpa model: mengubah kalimat obrolan bebas menjadi memori yang bersih. Di data
+yang sama tidak ada skor berbasis aturan yang mencapai ketepatan 70%, jadi kalimat itu tetap draft
+yang belum ditinjau (bisa dicari, tidak pernah diinjeksi). Tambahkan Ollama atau endpoint
+OpenAI-compatible untuk itu.
 
 ## Kebutuhan
 
@@ -175,12 +199,14 @@ Saat pertama dibuka, asisten setup menampilkan AI tools yang ditemukan di komput
 menghubungkan yang kamu pilih, mengimpor sesi lamanya, lalu menunjukkan apa yang kini Memoria
 ingat tentang proyek terbarumu — biasanya dalam satu menit.
 
-Secara bawaan Memoria memakai **Tier 0 heuristik**: sesi ditangkap dan menjadi kandidat memori.
-Noise (output tool, listing shell, path lepas) dan duplikat diarsipkan otomatis, sinyal kuat
-langsung aktif, dan sedikit draft yang ragu dinilai ulang setiap hari — Anda tidak perlu
-menyetujui ribuan item satu per satu. Setiap batch triage bisa dibatalkan. Search, tasks,
-timeline, graph, handoff — semuanya tetap bekerja. Secret (API key, token, private key,
-password) disensor sebelum disimpan.
+Secara bawaan Memoria memakai **Tier 0**, tanpa model. Event terstruktur (todo, jawaban
+pertanyaan, error→fix dari output build, commit) menjadi memori dengan status aslinya. Pesan
+terakhir agen di tiap giliran menjadi laporan giliran berumur pendek untuk blok resume. Ekstraksi
+kalimat berbasis aturan tetap berjalan, tapi hasilnya tetap draft: `recall` mencarinya, sedangkan
+blok resume dan `project_context` hanya berisi bukti terstruktur. Noise dan duplikat diarsipkan
+otomatis, setiap batch triage bisa dibatalkan, dan tidak ada yang perlu disetujui manual. Secret
+(API key, token, private key berlabel, password) disensor sebelum disimpan. `memoria doctor`
+memeriksa instalasi dan memberi tahu apa yang perlu diperbaiki.
 
 Ingin ekstraksi & embedding kelas LLM?
 
@@ -405,8 +431,10 @@ Settings → Sync. Bundle terenkripsi E2E dan tidak pernah berisi embedding, sec
 transkrip, atau path lokal.
 
 **Apakah saya butuh Ollama?**
-Tidak. Heuristik berjalan tanpa model — inbox tinjau memandu Anda. Ollama adalah jalur upgrade
-yang terdeteksi otomatis saat terpasang.
+Tidak. Tanpa model Anda tetap mendapat capture terstruktur (todo, jawaban pertanyaan, error→fix,
+commit), laporan giliran, blok resume, dan pencarian. Kalimat obrolan bebas tetap draft yang belum
+ditinjau, karena ekstraksi berbasis aturan belum cukup tepat untuk disajikan otomatis. Ollama
+adalah jalur upgrade untuk ekstraksi kalimat yang bersih, terdeteksi otomatis saat terpasang.
 
 **Tool apa saja yang didukung?**
 Claude Code, Codex, opencode, Gemini CLI, Copilot, Antigravity — plus capture VS Code, Cursor,

@@ -1,54 +1,23 @@
 # Changelog
-
-Semua perubahan penting pada Memoria didokumentasikan di file ini.
-Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.1.0/);
-versioning mengikuti [Semantic Versioning](https://semver.org/lang/id/).
-
-## [0.11.0] — 2026-11-15 — Hardened & Measured
-
-**Re-audit menyeluruh (2 jalur paralel: engine + web/API)** menemukan 3 bug
-kritis — termasuk **kehilangan data sesungguhnya** di jalur capture — dan
-seluruh temuan high/medium penting diperbaiki di rilis ini.
-
-### Fixed
-- **CRITICAL — scanner kehilangan data sesi hidup**: kelima scanner
-  me-restart `seq` dari 0 tiap scan, sementara `transcripts` punya
-  UNIQUE(tool, session_id, seq) + INSERT OR IGNORE — semua pesan baru sesi
-  yang bertumbuh dibuang diam-diam setelah scan pertama. Kini
-  `seqAllocator(tool)` membaca MAX(seq) per sesi dan menaikkan in-memory
-  (5 scanner, 0 `seq++` tersisa).
-- **CRITICAL — auto-link menarget baris salah**: `addMemoryWithDedupe`
-  membaca `last_insert_rowid()` SETELAH `insertMemory` meng-insert entities +
-  sync outbox — id menunjuk outbox, auto-linking membisukan grafik atau
-  membuat relasi palsu. `insertMemory` kini mengembalikan id.
-- **HIGH**: backup harian menyalin DB WAL yang hidup (robek/stale) → kini
-  `VACUUM INTO`; `scanAll` tanpa guard reentrancy (watcher + hot-path +
-  /api/scan bisa tumpang tindih) → latch; `isGenericMemory` menghapus memori
-  nyata (satu fence/bullet di tengah konten multi-baris = seluruh memori
-  dibuang) → dua kelas pola + aturan dominasi ≥50%; `continuity_events`
-  tanpa retensi → prune 90 hari + index (kind, ts); project brief kini
-  diidentifikasi via `source_tool='brief'` (bukan prefix konten); hapus
-  memori kini ikut membersihkan tags/entities (paritas jalur sync).
-- **HIGH (web)**: filter kind/project TANPA query merender list kosong
-  (kini /api/search berjalan tanpa q); pipeline `since` bocor sampai
-  total/hasMore/list/search (infinite Load more + hasil search lama
-  menyembunyikan yang baru); id `pdTasks` duplikat (daftar tugas
-  terinjeksi ke tombol header); CSP mematikan tombol Retry & fallback logo
-  milik app sendiri (kini addEventListener); batch bar bocor ke tab lain.
-- **MEDIUM**: 500 tidak lagi membocorkan stack + path; `numParam()` di
-  semua batas numerik (NaN tidak lagi mencapai node:sqlite); readBody
-  dibatasi 10 MB + close/error listeners; SSE cek writableEnded/destroyed +
-  res error handler; 8 endpoint berat dilindungi guard in-flight (409);
-  purge/clean-noise dalam satu transaksi; vec index kini mengikuti counter
-  versi data (recall semantik tidak lagi basi setelah update); topics
-  diff-before-write (tidak lagi churn outbox harian) + k-means downsample
-  2000; continuity pairing satu-ke-satu; access_count satu UPDATE batch;
-  highlight satu-pass (query 'mark' tidak merusak markup sendiri); seq
-  guard untuk semua renderer async + palette; loader per-view pindah ke
-  setView (tidak ada lagi halaman Graph/Integrations kosong); purge probe
-  di dalam try.
-
+All notable changes to Memoria are documented in this file.
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
+versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
+
+## [0.17.0] — 2026-11-24 — Quality
+A quality release: no new integrations, measured changes only. Every item below came with
+before/after numbers from a real library; the headline ones are in the README ("What it
+measures"). Highlights: structured capture of todos, answered questions, verifier error→fix
+and commits; turn reports; a lifecycle that keeps expired and stale memories out of context;
+retention; capture health; `memoria doctor`; a lite MCP toolset. Without a model, only
+structured evidence is served unasked, and rule-based sentences stay searchable drafts.
+Schema v10 → v14 (a snapshot is taken first); sync stays compatible with v0.16 in both
+directions.
+
+### Docs
+- README (EN/ID/HI) and the landing page describe what Tier 0 does and does not do, with
+  measured numbers; the graph, webhooks and team brain are marked experimental.
+- `PRIVACY.md`.
 
 ### Transcript roles repaired (migration v11)
 - **Old Claude Code tool output no longer counts as something you said.** Before v0.12 every tool result (file reads, shell output, edit receipts) was stored with role `user`. Migration v11 re-labels those rows as `tool` or `system` from their text, in Claude sessions written by the old parser only. Checked against 8,068 rows whose original jsonl still exists: 96.9% of tool output leaves `user`, 96.9% of typed messages stay `user`, and rows labelled `user` went from 21% to 85% correct. The session's "last user request" in snapshots was right in 5 of 15 labelled sessions before and 13 of 14 after; 8 of 78 automatic task closures came only from tool output and no longer happen.
@@ -417,6 +386,49 @@ Heuristic/no-AI mode is now strong enough for instant limit-hopping continuity w
 ### Changed
 - **Heuristic dedupe/task lifecycle** — dedupe/link candidates include heuristic drafts (merge/link without surfacing to recall), and task lifecycle can resolve heuristic draft `task_pending` items.
 - **Windsurf capture enabled by default** — Windsurf vscdb source is now enabled out of the box (still subject to per-install source settings) to improve cross-tool coverage.
+
+## [0.11.0] — 2026-11-15 — Hardened & Measured
+**Full re-audit (two parallel tracks: engine + web/API)** found 3 critical
+bugs, including **real data loss** in the capture path. All important
+high/medium findings are fixed in this release.
+### Fixed
+- **CRITICAL — scanners lost data from live sessions**: all five scanners
+  restarted `seq` at 0 on every scan, while `transcripts` has
+  UNIQUE(tool, session_id, seq) + INSERT OR IGNORE, so every new message in a
+  growing session was silently dropped after the first scan. Now
+  `seqAllocator(tool)` reads MAX(seq) per session and increments in memory
+  (5 scanners, no `seq++` left).
+- **CRITICAL — auto-link targeted the wrong row**: `addMemoryWithDedupe`
+  read `last_insert_rowid()` AFTER `insertMemory` had inserted entities and
+  the sync outbox, so the id pointed at the outbox and auto-linking either
+  muted the graph or created false relations. `insertMemory` now returns the id.
+- **HIGH**: the daily backup copied the live WAL database (torn or stale), now
+  `VACUUM INTO`; `scanAll` had no reentrancy guard (watcher + hot path +
+  /api/scan could overlap), now latched; `isGenericMemory` deleted real
+  memories (one fence or bullet inside multi-line content dropped the whole
+  memory), now two pattern classes + a ≥50% dominance rule;
+  `continuity_events` had no retention, now pruned after 90 days + index
+  (kind, ts); project briefs are identified by `source_tool='brief'` (not a
+  content prefix); deleting a memory also cleans its tags/entities (parity
+  with the sync path).
+- **HIGH (web)**: kind/project filters WITHOUT a query rendered an empty list
+  (/api/search now runs without q); the `since` pipeline leaked into
+  total/hasMore/list/search (endless Load more, and old search results hid
+  new ones); duplicate `pdTasks` id (the task list was injected into a header
+  button); CSP disabled the app's own Retry button and logo fallback (now
+  addEventListener); the batch bar leaked into other tabs.
+- **MEDIUM**: 500 responses no longer leak stack traces or paths;
+  `numParam()` on every numeric boundary (NaN no longer reaches node:sqlite);
+  readBody capped at 10 MB + close/error listeners; SSE checks
+  writableEnded/destroyed + a response error handler; 8 heavy endpoints guarded
+  in-flight (409); purge/clean-noise in one transaction; the vector index
+  follows the data version counter (semantic recall no longer goes stale after
+  updates); topics diff before writing (no more daily outbox churn) + k-means
+  downsample to 2000; continuity pairing is one-to-one; access_count in one
+  batched UPDATE; single-pass highlight (a 'mark' query no longer breaks its
+  own markup); seq guard for every async renderer + the palette; per-view
+  loaders moved to setView (no more empty Graph/Integrations pages); purge
+  probe inside try.
 
 ## [0.10.0] — 2026-11-14 — The Bridge
 

@@ -18,7 +18,7 @@ No cloud. No account. Nothing leaves your computer.
 ![Electron](https://img.shields.io/badge/Electron-37-47848f)
 ![Inference](https://img.shields.io/badge/inference-optional%20%28Ollama%20%2F%20OpenAI%20compat%29-529fff)
 ![Data](https://img.shields.io/badge/data-100%25%20local-4cc38a)
-![Status](https://img.shields.io/badge/status-0.16.3--beta-7f6eff)
+![Status](https://img.shields.io/badge/status-0.17.0--beta-7f6eff)
 [![Release](https://img.shields.io/github/v/release/xinzzu/Memoria?label=Release)](https://github.com/xinzzu/Memoria/releases)
 [![Build](https://github.com/xinzzu/Memoria/actions/workflows/build.yml/badge.svg?label=Build)](https://github.com/xinzzu/Memoria/actions)
 [![License](https://img.shields.io/github/license/xinzzu/Memoria)](LICENSE)
@@ -48,8 +48,10 @@ Every AI tool has short-term amnesia. Claude doesn't remember yesterday's sessio
 know you decided "12-column grid" in Gemini CLI. And when you hit your usage limit mid-task and
 switch to another tool, you explain everything all over again.
 
-**Memoria closes that gap.** It watches your AI tool sessions, extracts what matters — facts,
-decisions, tasks, fixed errors — and hands it to the next session, in any tool, automatically.
+**Memoria closes that gap.** It watches your AI tool sessions and keeps what they actually
+record: the agent's todo list with its real status, the questions it asked you and your answers,
+build or test errors and the edits that fixed them, commits, and the agent's report at the end
+of each turn. It hands that to the next session, in any tool, automatically.
 
 Built for the **limit-hopping** workflow: hit your limit at 14:30, open a different tool at
 14:31 — and it already knows what you were working on.
@@ -122,17 +124,38 @@ flowchart TB
 | 🧩 **MCP bridge — one URL, every tool** | MCP over HTTP at `http://127.0.0.1:48210/mcp` + one-click registration into 12 clients (Claude Code/Desktop, Codex, Gemini, opencode, Copilot CLI, Antigravity, Cursor, Windsurf, VS Code, Cline, Zed) |
 | 🤖 **Self-editing memory** | Agents don't just read the brain — they curate it: `recall` (project-scoped, token budget), `remember` (ADD/UPDATE/NOOP decisions), `update_memory`, `forget`, `build_context`, `file_context` (what is known about a file before editing it) |
 | ✅ **Tasks view** | Every task your AI sessions promised, in one checkable board |
-| 🧠 **Tiered intelligence** | Works with **no model at all** (heuristics + automatic triage, no manual approval), with Ollama, or any OpenAI-compatible endpoint (LM Studio, llama.cpp, vLLM, cloud — opt-in) |
-| 🔍 **Hybrid retrieval** | Keyword (FTS5 trigram) + embeddings + graph centrality, fuzzy-tolerant — measured on a reproducible benchmark: **hit@5 92.8–100%** with zero LLM calls |
-| 🕸️ **Memory graph** | True 3D force graph (2D fallbacks), degree-priority labels with anti-overlap, hover focus on neighbors, zoom & pan |
+| 🧾 **Structured capture** | Claude Code and opencode: todo lists (`TodoWrite`/`update_plan`/`todowrite`), answered questions, verifier runs read from their **output** (piped builds hide the exit code), file edits and commits become memories with their real status — no model needed |
+| 🧠 **Tiered intelligence** | Works with **no model at all**: structured capture plus rule-based extraction. Rule-based sentences stay drafts that `recall` searches; only structured evidence is served unasked. An Ollama or OpenAI-compatible model (opt-in) gives clean sentence extraction |
+| 🔍 **Hybrid retrieval** | Keyword (FTS5 trigram) + embeddings + graph centrality, fuzzy-tolerant — measured on a reproducible synthetic benchmark: **hit@5 92.8–100%** with zero LLM calls (55% on held-out real memories, see below) |
+| 🕸️ **Memory graph** *(experimental)* | True 3D force graph (2D fallbacks), degree-priority labels with anti-overlap, hover focus on neighbors, zoom & pan |
 | 📋 **Tasks & timeline** | Per-project activity + git history + weekly digest |
 | 🔎 **Global palette** | Search & copy memories from anywhere; quick-note hotkey |
-| 👥 **Team project brain** | Opt-in `.memoria/brain.md` in the repo: decisions, conventions and fixes shared through git, reviewable in PRs, imported back as team memories |
+| 👥 **Team project brain** *(experimental)* | Opt-in `.memoria/brain.md` in the repo: decisions, conventions and fixes shared through git, reviewable in PRs, imported back as team memories |
 | 🔐 **Encrypted sync (optional)** | E2E encrypted `.memsync` bundles across your devices — manual or shared folder (Dropbox/iCloud/Syncthing/network), no server, no embeddings/secrets/transcripts |
-| 🔔 **Webhooks & notifications** | Opt-in alerts to Discord, Telegram, or generic JSON webhooks (digest, scan, approvals, pending drafts) |
+| 🔔 **Webhooks & notifications** *(experimental)* | Opt-in alerts to Discord, Telegram, or generic JSON webhooks (digest, scan, approvals, pending drafts) |
 | 🌐 **EN / ID interface** | English-first, Bahasa Indonesia one click away |
 | 🧹 **Self-cleaning** | Daily consolidation merges near-duplicates; tool-noise filter keeps the review inbox honest; one-click noise cleanup |
 | 💾 **Backups & export** | Auto-backup (last 10, WAL-safe), restore, export to Markdown / JSON / Obsidian vault — and import a whole notes folder back in |
+
+## What it measures (v0.17.0)
+
+Measured on the maintainer's real library (about 90 Claude Code / opencode / Gemini sessions,
+mostly in Indonesian). Ground truth for todos comes from the raw session files. The other labels
+were made blind by an AI assistant (content only, without the pipeline's decision) and are not
+independently verified, so read them as estimates.
+
+| | Before | v0.17.0 |
+|---|---|---|
+| Agent todo items captured with the right status (548) | 0.2% | **100%** |
+| Real decisions from answered questions captured (58) | 2 | **56** |
+| Precision of what is served to agents unasked (resume, `project_context`) | 42% (rule-based sentences) | **96%** (structured evidence; 81% without todos) |
+| `recall` hit@5 on held-out real memories | 24% | **55%** |
+| Expired or stale memories in `project_context` | 16.9% | **1.7%** |
+| Tool definitions + resume block per session (lite mode) | ≈1,960 tokens | **≈730** |
+
+What it does not do without a model: turn arbitrary chat sentences into clean memories. On the
+same data no rule-based score reached 70% precision, so those sentences stay unreviewed drafts
+(searchable, never injected). Add Ollama or an OpenAI-compatible endpoint for that.
 
 ## Requirements
 
@@ -176,12 +199,14 @@ On first launch a setup assistant lists the AI tools found on your machine, conn
 you pick, imports their past sessions, and shows what Memoria now remembers about your recent
 projects — usually within a minute.
 
-Out of the box, Memoria runs on **Tier 0 heuristics**: sessions are captured and turned into
-memories. Noise (tool output, shell listings, bare paths) and duplicates are archived
-automatically, strong signals become active, and the few uncertain drafts are re-checked daily —
-you never have to approve thousands of items by hand. Every triage batch can be undone. Search,
-tasks, timeline, graph, handoff — everything works. Secrets (API keys, tokens, private keys,
-passwords) are redacted before anything is stored.
+Out of the box, Memoria runs on **Tier 0**, with no model. Structured events (todos, answered
+questions, error→fix from build output, commits) become memories with their real status. The
+agent's last message of each turn becomes a short-lived turn report for the resume block.
+Rule-based sentence extraction runs too, but those sentences stay drafts: `recall` searches
+them, while the resume block and `project_context` only carry structured evidence. Noise and
+duplicates are archived automatically, every triage batch can be undone, and nothing needs
+approving by hand. Secrets (API keys, tokens, labelled private keys, passwords) are redacted
+before anything is stored. `memoria doctor` checks the install and says what to fix.
 
 Want LLM-grade extraction and embeddings later?
 
@@ -371,7 +396,10 @@ Global: `Ctrl/⌘ + Shift + M` quick note · `Ctrl/⌘ + Shift + Space` memory p
 - Encrypted sync bundles are end-to-end encrypted and never include embeddings, secrets,
   settings, transcripts, or machine-local paths.
 - Stale, low-importance memories are archived automatically (forgetting curve); backups keep
-  the last 10 versions.
+  the last 10 versions, and a snapshot is taken before every schema migration.
+- `memoria maintain retention` moves old raw transcripts to a local gzip archive (or deletes
+  them, opt-in). The full list of what is read, stored and can leave the machine is in
+  [PRIVACY.md](PRIVACY.md).
 
 ## Development
 
@@ -440,8 +468,10 @@ or Settings → Sync. Bundles are end-to-end encrypted and never include embeddi
 settings, transcripts, or machine-local paths.
 
 **Do I need Ollama?**
-No. Heuristics work with zero models and triage their own output automatically. Ollama is
-an upgrade path, detected automatically when you install it.
+No. Without a model you get structured capture (todos, answered questions, error→fix, commits),
+turn reports, the resume block and search. Free-form chat sentences stay unreviewed drafts,
+because rule-based extraction is not precise enough to serve them unasked. Ollama is the upgrade
+path for clean sentence extraction, detected automatically when you install it.
 
 **Which tools are supported?**
 Claude Code, Codex, opencode, Gemini CLI, Copilot, Antigravity — plus VS Code, Cursor and
