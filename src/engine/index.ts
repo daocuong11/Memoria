@@ -29,6 +29,8 @@ Usage: memoria <command>
   journal [days]         Learning journal: fixed errors, recurring first (default 7 days)
   maintain triage        Preview Tier 0 auto-triage (--apply, --undo)
   maintain backfill-events  Re-read Claude Code / OpenCode for todos, questions, verifier runs, commits
+  maintain retention [--days N] [--apply [--delete]] [--restore <file>]
+                         Move old extracted transcripts to a gzip archive (default 90 days)
   maintain <reembed|consolidate|all>
   sync <setup|status|export|import|folder|conflicts>
   backup                 Back up the database
@@ -143,6 +145,30 @@ async function main(): Promise<void> {
         else if (r.batch) console.log(`\nBatch ${r.batch}. Revert with: maintain triage --undo`);
         break;
       }
+      if (sub === "retention") {
+        const { planRetention, applyRetention, restoreTranscripts } = await import("./store/retention");
+        const flags = process.argv.slice(4);
+        const at = flags.indexOf("--restore");
+        if (at >= 0) {
+          const n = restoreTranscripts(String(flags[at + 1] || ""));
+          console.log(`Restored ${n} transcript rows`);
+          break;
+        }
+        const di = flags.indexOf("--days");
+        const days = di >= 0 ? Math.max(1, Number(flags[di + 1]) || 90) : 90;
+        const mb = (b: number) => (b / 1048576).toFixed(1) + " MB";
+        if (!flags.includes("--apply")) {
+          const p = planRetention(days);
+          console.log(`Preview: ${p.rows} transcript rows in ${p.sessions} sessions older than ${days} days (${mb(p.bytes)} of text).`);
+          console.log("Not touched: rows not yet extracted, the latest session of each project, memories, session events.");
+          console.log("Run with --apply to archive (gzip, restorable), or --apply --delete to delete permanently.");
+          break;
+        }
+        const r = applyRetention(days, { mode: flags.includes("--delete") ? "delete" : "archive" });
+        console.log(r.mode === "archive" ? `Archived ${r.rows} rows (${r.sessions} sessions) to ${r.file}` : `Deleted ${r.rows} rows (${r.sessions} sessions) permanently`);
+        if (r.file) console.log(`Restore with: maintain retention --restore "${r.file}"`);
+        break;
+      }
       if (sub === "backfill-events") {
         const { backfillEvents } = await import("./ingest/backfill");
         const r = await backfillEvents({ log: (m) => console.log(m) });
@@ -167,7 +193,7 @@ async function main(): Promise<void> {
         console.log(`Consolidation: removed ${r.removed} in ${r.clusters} clusters`);
       }
       if (!["heuristic-promote", "reembed", "all", "consolidate"].includes(sub)) {
-        console.log("Usage: node dist/engine/index.js maintain <triage [--apply|--undo]|backfill-events|heuristic-promote|reembed|consolidate|all>");
+        console.log("Usage: node dist/engine/index.js maintain <triage [--apply|--undo]|backfill-events|retention|heuristic-promote|reembed|consolidate|all>");
         process.exit(1);
       }
       break;

@@ -221,6 +221,7 @@ const MIGRATIONS: Migration[] = [
   { version: 11, name: "legacy-claude-roles", up: m11LegacyClaudeRoles },
   { version: 12, name: "retrieval-log", up: m12RetrievalLog },
   { version: 13, name: "session-events-memory-meta", up: m13SessionEvents },
+  { version: 14, name: "redact-labelled-hex-keys", up: (d) => void redactStored(d) },
 ];
 
 export const MEMORY_CLASSES = ["", "working", "durable"] as const;
@@ -279,7 +280,7 @@ export interface SessionEvent {
 /** Insert one event; a repeat of the same (tool, session, sourceRef) is
  * ignored. Text in the payload is redacted. Returns the new id or null. */
 export function insertSessionEvent(e: SessionEvent): number | null {
-  const json = redactSecrets(JSON.stringify(e.payload ?? {})).text;
+  const json = redactJson(JSON.stringify(e.payload ?? {})).text;
   const res = getDb()
     .prepare(
       `INSERT OR IGNORE INTO session_events (tool, session_id, project_id, ts, type, source_ref, payload, git_branch)
@@ -428,19 +429,29 @@ function m8RedactAndTriage(d: DatabaseSync): void {
     );
     CREATE INDEX IF NOT EXISTS idx_triage_batch ON triage_log(batch);
   `);
+  redactStored(d);
+}
+
+/** Run the redactor over stored transcripts, memories and session events;
+ * only changed rows are written. Used by M8 and again by M14 when rules are
+ * added (M14: labelled 32-byte hex keys, keypair byte arrays). */
+export function redactStored(d: DatabaseSync): number {
   let total = 0;
-  for (const table of ["transcripts", "memories"]) {
-    const upd = d.prepare(`UPDATE ${table} SET content = ? WHERE id = ?`);
+  const tables = ["transcripts", "memories"];
+  if (d.prepare("SELECT 1 AS x FROM sqlite_master WHERE type = 'table' AND name = 'session_events'").get()) tables.push("session_events");
+  for (const table of tables) {
+    const col = table === "session_events" ? "payload" : "content";
+    const upd = d.prepare(`UPDATE ${table} SET ${col} = ? WHERE id = ?`);
     let lastId = 0;
     for (;;) {
       const rows = d
-        .prepare(`SELECT id, content FROM ${table} WHERE id > ? ORDER BY id LIMIT 2000`)
+        .prepare(`SELECT id, ${col} AS content FROM ${table} WHERE id > ? ORDER BY id LIMIT 2000`)
         .all(lastId) as Array<{ id: number; content: string | null }>;
       if (!rows.length) break;
       for (const r of rows) {
         lastId = r.id;
         if (!r.content) continue;
-        const res = redactSecrets(r.content);
+        const res = col === "payload" ? redactJson(r.content) : redactSecrets(r.content);
         if (res.count > 0) {
           upd.run(res.text, r.id);
           total += res.count;
@@ -453,6 +464,40 @@ function m8RedactAndTriage(d: DatabaseSync): void {
     d.prepare("INSERT INTO settings (key, value) VALUES ('redactedTotal', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(
       String((Number(cur?.value) || 0) + total)
     );
+  }
+  return total;
+}
+
+/** Redact every string inside a JSON value, so the result stays valid JSON. */
+function redactValue(v: unknown, acc: { count: number }): unknown {
+  if (typeof v === "string") {
+    const r = redactSecrets(v);
+    acc.count += r.count;
+    return r.text;
+  }
+  if (Array.isArray(v)) {
+    // A keypair is an array of 64 small numbers, not a string.
+    if (v.length === 64 && v.every((x) => Number.isInteger(x) && x >= 0 && x <= 255)) {
+      acc.count++;
+      return "[REDACTED:keypair-bytes]";
+    }
+    return v.map((x) => redactValue(x, acc));
+  }
+  if (v && typeof v === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, x] of Object.entries(v)) out[k] = redactValue(x, acc);
+    return out;
+  }
+  return v;
+}
+
+export function redactJson(json: string): { text: string; count: number } {
+  try {
+    const acc = { count: 0 };
+    const v = redactValue(JSON.parse(json), acc);
+    return { text: acc.count ? JSON.stringify(v) : json, count: acc.count };
+  } catch {
+    return redactSecrets(json);
   }
 }
 

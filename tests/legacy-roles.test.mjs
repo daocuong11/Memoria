@@ -69,7 +69,7 @@ test("M11 touches only old-parser Claude sessions and snapshots first", () => {
   raw.close();
 
   const d = dbmod.initDb(dir);
-  assert.equal(Number(d.prepare("PRAGMA user_version").get().user_version), 13);
+  assert.equal(Number(d.prepare("PRAGMA user_version").get().user_version), 14);
   const roles = Object.fromEntries(d.prepare("SELECT session_id || ':' || seq AS k, role FROM transcripts").all().map((r) => [r.k, r.role]));
   assert.equal(roles["old:0"], "user");
   assert.equal(roles["old:2"], "tool");

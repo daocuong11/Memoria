@@ -122,7 +122,7 @@ test("migration v13 keeps existing memories intact and is idempotent", () => {
   raw.exec("PRAGMA user_version = 12");
   raw.close();
   const d = dbmod.initDb(dir);
-  assert.equal(Number(d.prepare("PRAGMA user_version").get().user_version), 13);
+  assert.equal(Number(d.prepare("PRAGMA user_version").get().user_version), 14);
   const m = dbmod.memoryById(id);
   assert.equal(m.content, "survives v13");
   assert.equal(m.memoryClass, "");
