@@ -82,7 +82,7 @@ memakai pipe sehingga exit code tertutup.
 22. Q9a Embedding semantik: `nomic-embed-text` (Ollama) vs `multilingual-e5-small` in-process vs `all-MiniLM-L6-v2`. Target hit@5 (a) ≥70%, (b) ≥80%. — **A pilih model**
 23. Q9b LLM opsional: nilai draft ragu, padatkan laporan giliran, konsolidasi keputusan; fallback Tier 0. Target ketepatan ≥85%.
 24. Q9.5 `memoria doctor`, snapshot sebelum migrasi, checksum SHA256 di release, `PRIVACY.md`. — **Selesai:** `memoria doctor` (12 cek read-only: izin folder, integritas, versi skema, WAL, ukuran, backup, capture, antrean ekstraksi, Ollama, integrasi MCP, token API, sync — tiap peringatan punya baris perbaikan; exit 1 bila ada gagal); snapshot sebelum migrasi (sejak langkah 9); `SHA256SUMS.txt` di tiap GitHub Release (job `release`); `PRIVACY.md` (ikut paket npm).
-25. Q10 Rilis v0.17.0 "Quality": README dengan angka gerbang + positioning (claude-mem, OpenMemory/mem0, Basic Memory, memori bawaan Claude Code) + siapa yang cocok/tidak. — **A: "boleh rilis"**
+25. Q10 Rilis v0.17.0 "Quality": README dengan angka gerbang + positioning (claude-mem, OpenMemory/mem0, Basic Memory, memori bawaan Claude Code) + siapa yang cocok/tidak. — **A: "boleh rilis"** — **Disiapkan (PR rilis):** README EN/ID/HI + landing dengan angka terukur dan batas Tier 0; versi 0.17.0, CHANGELOG dipotong, `server.json`, badge; uji upgrade v0.16.3 + `compat-sync` 8/8. Menunggu "boleh rilis" untuk merge + tag.
 
 **Sesudah v0.17.0:** usulan ADR (`docs/adr/`), export JSONL lewat CLI, filter &
 file konflik Obsidian, refactor, parser Codex/Gemini, i18n/Contributors/

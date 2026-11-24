@@ -18,7 +18,7 @@ Claude Code, Codex, Gemini CLI, Copilot, Antigravity, opencode, VS Code, Cursor,
 ![Electron](https://img.shields.io/badge/Electron-37-47848f)
 ![Inference](https://img.shields.io/badge/inference-optional%20%28Ollama%20%2F%20OpenAI%20compat%29-529fff)
 ![Data](https://img.shields.io/badge/data-100%25%20local-4cc38a)
-![Status](https://img.shields.io/badge/status-0.16.3--beta-7f6eff)
+![Status](https://img.shields.io/badge/status-0.17.0--beta-7f6eff)
 [![Release](https://img.shields.io/github/v/release/xinzzu/Memoria?label=Release)](https://github.com/xinzzu/Memoria/releases)
 [![Build](https://github.com/xinzzu/Memoria/actions/workflows/build.yml/badge.svg?label=Build)](https://github.com/xinzzu/Memoria/actions)
 [![License](https://img.shields.io/github/license/xinzzu/Memoria)](LICENSE)
@@ -124,15 +124,37 @@ flowchart TB
 | ✅ **Tasks व्यू** | आपके AI सेशन द्वारा किए गए हर वादे का टास्क, एक ही चेक करने योग्य बोर्ड में |
 | 🧠 **टियर्ड इंटेलिजेंस** | **बिना किसी मॉडल के** भी काम करता है (heuristics + स्वचालित ट्रायाज, मैन्युअल अनुमोदन नहीं), Ollama के साथ, या किसी भी OpenAI-compatible एंडपॉइंट (LM Studio, llama.cpp, vLLM, क्लाउड — opt-in) के साथ |
 | 🔍 **हाइब्रिड रिट्रीवल** | कीवर्ड (FTS5 trigram) + embeddings + ग्राफ़ सेंट्रैलिटी, टाइपो-सहनशील — एक दोहराने योग्य बेंचमार्क पर मापा गया: बिना किसी LLM कॉल के **hit@5 92.8–100%** |
-| 🕸️ **Memory graph** | असली 3D फ़ोर्स ग्राफ़ (2D फ़ॉलबैक), डिग्री-प्राथमिकता वाले लेबल (ओवरलैप से बचाव के साथ), पड़ोसियों पर hover फ़ोकस, ज़ूम और पैन |
+| 🕸️ **Memory graph** *(experimental)* | असली 3D फ़ोर्स ग्राफ़ (2D फ़ॉलबैक), डिग्री-प्राथमिकता वाले लेबल (ओवरलैप से बचाव के साथ), पड़ोसियों पर hover फ़ोकस, ज़ूम और पैन |
 | 📋 **Tasks और टाइमलाइन** | प्रति-प्रोजेक्ट गतिविधि + git इतिहास + साप्ताहिक डाइजेस्ट |
 | 🔎 **ग्लोबल पैलेट** | कहीं से भी मेमोरी खोजें और कॉपी करें; क्विक-नोट हॉटकी |
-| 👥 **टीम प्रोजेक्ट ब्रेन** | रेपो में opt-in `.memoria/brain.md`: निर्णय, कन्वेंशन और फ़िक्स git के ज़रिए साझा, PR में रिव्यू योग्य, और टीम मेमोरी के रूप में वापस इम्पोर्ट |
+| 👥 **टीम प्रोजेक्ट ब्रेन** *(experimental)* | रेपो में opt-in `.memoria/brain.md`: निर्णय, कन्वेंशन और फ़िक्स git के ज़रिए साझा, PR में रिव्यू योग्य, और टीम मेमोरी के रूप में वापस इम्पोर्ट |
 | 🔐 **एन्क्रिप्टेड सिंक (वैकल्पिक)** | आपके डिवाइस के बीच E2E एन्क्रिप्टेड `.memsync` बंडल — मैन्युअल या शेयर्ड फ़ोल्डर (Dropbox/iCloud/Syncthing/नेटवर्क), कोई सर्वर नहीं, कोई embeddings/secrets/ट्रांसक्रिप्ट नहीं |
-| 🔔 **Webhooks और नोटिफ़िकेशन** | Discord, Telegram या सामान्य JSON webhooks पर opt-in अलर्ट (डाइजेस्ट, स्कैन, अनुमोदन, लंबित ड्राफ़्ट) |
+| 🔔 **Webhooks और नोटिफ़िकेशन** *(experimental)* | Discord, Telegram या सामान्य JSON webhooks पर opt-in अलर्ट (डाइजेस्ट, स्कैन, अनुमोदन, लंबित ड्राफ़्ट) |
 | 🌐 **EN / ID इंटरफ़ेस** | पहले अंग्रेज़ी, Bahasa Indonesia एक क्लिक दूर |
 | 🧹 **स्वयं-सफ़ाई** | दैनिक कंसॉलिडेशन लगभग-डुप्लिकेट को मर्ज करता है; टूल-नॉइज़ फ़िल्टर रिव्यू इनबॉक्स को साफ़ रखता है; एक-क्लिक नॉइज़ क्लीनअप |
 | 💾 **बैकअप और एक्सपोर्ट** | ऑटो-बैकअप (आख़िरी 10, WAL-सेफ़), रीस्टोर, Markdown / JSON / Obsidian vault में एक्सपोर्ट — और पूरा नोट्स फ़ोल्डर वापस इम्पोर्ट भी करें |
+
+## मापे गए नतीजे (v0.17.0)
+
+_(English; details in [README.md](README.md))_
+
+Measured on the maintainer's real library (about 90 Claude Code / opencode / Gemini sessions,
+mostly in Indonesian). Ground truth for todos comes from the raw session files. The other labels
+were made blind by an AI assistant (content only, without the pipeline's decision) and are not
+independently verified, so read them as estimates.
+
+| | Before | v0.17.0 |
+|---|---|---|
+| Agent todo items captured with the right status (548) | 0.2% | **100%** |
+| Real decisions from answered questions captured (58) | 2 | **56** |
+| Precision of what is served to agents unasked (resume, `project_context`) | 42% (rule-based sentences) | **96%** (structured evidence; 81% without todos) |
+| `recall` hit@5 on held-out real memories | 24% | **55%** |
+| Expired or stale memories in `project_context` | 16.9% | **1.7%** |
+| Tool definitions + resume block per session (lite mode) | ≈1,960 tokens | **≈730** |
+
+What it does not do without a model: turn arbitrary chat sentences into clean memories. On the
+same data no rule-based score reached 70% precision, so those sentences stay unreviewed drafts
+(searchable, never injected). Add Ollama or an OpenAI-compatible endpoint for that.
 
 ## आवश्यकताएँ
 

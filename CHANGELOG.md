@@ -50,6 +50,21 @@ seluruh temuan high/medium penting diperbaiki di rilis ini.
 
 ## [Unreleased]
 
+## [0.17.0] — 2026-11-24 — Quality
+A quality release: no new integrations, measured changes only. Every item below came with
+before/after numbers from a real library; the headline ones are in the README ("What it
+measures"). Highlights: structured capture of todos, answered questions, verifier error→fix
+and commits; turn reports; a lifecycle that keeps expired and stale memories out of context;
+retention; capture health; `memoria doctor`; a lite MCP toolset. Without a model, only
+structured evidence is served unasked, and rule-based sentences stay searchable drafts.
+Schema v10 → v14 (a snapshot is taken first); sync stays compatible with v0.16 in both
+directions.
+
+### Docs
+- README (EN/ID/HI) and the landing page describe what Tier 0 does and does not do, with
+  measured numbers; the graph, webhooks and team brain are marked experimental.
+- `PRIVACY.md`.
+
 ### Transcript roles repaired (migration v11)
 - **Old Claude Code tool output no longer counts as something you said.** Before v0.12 every tool result (file reads, shell output, edit receipts) was stored with role `user`. Migration v11 re-labels those rows as `tool` or `system` from their text, in Claude sessions written by the old parser only. Checked against 8,068 rows whose original jsonl still exists: 96.9% of tool output leaves `user`, 96.9% of typed messages stay `user`, and rows labelled `user` went from 21% to 85% correct. The session's "last user request" in snapshots was right in 5 of 15 labelled sessions before and 13 of 14 after; 8 of 78 automatic task closures came only from tool output and no longer happen.
 - **Snapshot before migrations.** When a schema migration is pending, the database is first copied to `backups/memory-pre-v<N>-<time>.db` with `VACUUM INTO`.
