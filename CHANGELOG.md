@@ -55,6 +55,7 @@ seluruh temuan high/medium penting diperbaiki di rilis ini.
 - **Snapshot before migrations.** When a schema migration is pending, the database is first copied to `backups/memory-pre-v<N>-<time>.db` with `VACUUM INTO`.
 
 ### Fixed (found in the v0.16.3 → v0.17.0 upgrade test)
+- **Retrievals tab when empty:** no more row of zeros ("0 logged calls · 0 with no result · …") and no filter or clear button with nothing to filter. The tab now says what it is for, offers "Connect an AI tool", and says so when logging is paused.
 - **Settings no longer breaks on open.** A refactor on 5 Nov removed `loadBackups()`, so opening Settings threw, and the backup list, sync status, device list and capture health never loaded.
 - **No resume block in the home folder.** A session started in `~` made the home folder a "project", and resume blocks were written to `~/AGENTS.md`, `~/CLAUDE.md` and `~/GEMINI.md`. The home folder and filesystem roots are now never injected. `MEMORIA_NO_INJECT=1` turns injection off entirely, for tests and audits on a copy of a real database.
 - **The resume block lists only reviewed tasks and decisions** under the default structured policy. It no longer falls back to unreviewed heuristic drafts or transcript lines.
