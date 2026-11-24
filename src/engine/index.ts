@@ -19,6 +19,7 @@ Usage: memoria <command>
   scan                   Capture new sessions once
   recall "keywords"      Search memories
   status                 Counts per tool
+  doctor                 Check this install (database, backups, capture, integrations) and say what to fix
   token                  Print the dashboard sign-in link and the API token
   import <export.zip>    Import a ChatGPT or Claude data export
   obsidian sync <dir>    Two-way sync with a Markdown / Obsidian folder
@@ -325,6 +326,14 @@ async function main(): Promise<void> {
     case "--help":
     case "-h": {
       console.log(HELP_TEXT);
+      break;
+    }
+    case "doctor": {
+      ensureDb();
+      const { runDoctor, formatDoctor } = await import("./doctor");
+      const checks = await runDoctor();
+      console.log(formatDoctor(checks));
+      if (checks.some((c) => c.level === "fail")) process.exitCode = 1;
       break;
     }
     case "status": {

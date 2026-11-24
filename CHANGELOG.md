@@ -54,6 +54,11 @@ seluruh temuan high/medium penting diperbaiki di rilis ini.
 - **Old Claude Code tool output no longer counts as something you said.** Before v0.12 every tool result (file reads, shell output, edit receipts) was stored with role `user`. Migration v11 re-labels those rows as `tool` or `system` from their text, in Claude sessions written by the old parser only. Checked against 8,068 rows whose original jsonl still exists: 96.9% of tool output leaves `user`, 96.9% of typed messages stay `user`, and rows labelled `user` went from 21% to 85% correct. The session's "last user request" in snapshots was right in 5 of 15 labelled sessions before and 13 of 14 after; 8 of 78 automatic task closures came only from tool output and no longer happen.
 - **Snapshot before migrations.** When a schema migration is pending, the database is first copied to `backups/memory-pre-v<N>-<time>.db` with `VACUUM INTO`.
 
+### Doctor, checksums, privacy
+- **`memoria doctor`** runs read-only checks and prints a fix for each warning; it exits with 1 when something failed. It covers folder permissions, database integrity, schema version, journal mode, disk use, backups, capture health, extraction backlog, Ollama models, MCP integrations, the local API token and sync conflicts.
+- **SHA256 checksums.** Every GitHub Release now has `SHA256SUMS.txt` for its installers (`shasum -a 256 -c SHA256SUMS.txt`).
+- **`PRIVACY.md`** describes what is read, where it is stored, what is redacted, and every opt-in way data can leave the machine. It ships in the npm package.
+
 ### Capture health
 - **See whether each AI tool's sessions are reaching Memoria.** `memoria status`, `GET /api/capture-health` and a Settings card report every source as ok, behind, error, idle, missing or disabled. "Behind" means the tool kept writing more than a day after the last stored message: the parser stopped matching, or the app was not running. On a copy of a real library this showed Gemini 20 days behind, and Antigravity, VS Code and Copilot holding data with nothing stored, none of which was visible before.
 - **One bad transcript file no longer stops a scan.** The Claude Code parser skips an unreadable file, counts it, and goes on; the count appears in the health report.

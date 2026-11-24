@@ -224,6 +224,9 @@ const MIGRATIONS: Migration[] = [
   { version: 14, name: "redact-labelled-hex-keys", up: (d) => void redactStored(d) },
 ];
 
+/** Schema version this build migrates to (for `memoria doctor`). */
+export const LATEST_SCHEMA = MIGRATIONS[MIGRATIONS.length - 1].version;
+
 export const MEMORY_CLASSES = ["", "working", "durable"] as const;
 
 /** M13: structured events from agent sessions (todos, questions, titles,
