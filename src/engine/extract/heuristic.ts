@@ -196,6 +196,17 @@ export interface TriageResult {
   evidence?: number;
 }
 
+const SELF_LABELLED_LINE = /^\s*(?:[-*]\s*)?(?:todo|to-do|fixme|keputusan|decision|decided)\s*:/i;
+
+export function promotePolicy(): "structured" | "evidence" {
+  try {
+    const db = require("../store/db") as typeof import("../store/db");
+    return db.getSetting("tier0Promote", "structured") === "evidence" ? "evidence" : "structured";
+  } catch {
+    return "structured";
+  }
+}
+
 /** Tier 0 triage, then the evidence score (extract/evidence.ts) decides
  * active / draft / archive. Noise rules still archive outright. */
 export function evidenceTriage(m: { kind: string; content: string; importance: number; confidence?: number; signal?: string[] }, rt: RuntimeSignals = {}): TriageResult {
@@ -206,6 +217,12 @@ export function evidenceTriage(m: { kind: string; content: string; importance: n
   // An explicit checklist item is a task by construction: the score may
   // keep it out of `active`, but not throw it away.
   if (decision === "archive" && t.signals.some((x) => x === "checkbox_todo" || x === "checkbox_done")) decision = "draft";
+  // Gate result (step 17): no Tier 0 sentence feature reaches 70% precision
+  // on the current pipeline, so by default only structured evidence (session
+  // events, self-labelled lines) is served proactively; other sentences stay
+  // drafts, which `recall` still searches. Setting tier0Promote=evidence
+  // restores promotion by the evidence score.
+  if (decision === "active" && promotePolicy() === "structured" && !rt.fromEvent && !SELF_LABELLED_LINE.test(m.content)) decision = "draft";
   return { ...t, decision, evidence: Number(p.toFixed(3)), reason: decision === "active" ? "evidence" : decision === "archive" ? "low-evidence" : "uncertain" };
 }
 

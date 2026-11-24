@@ -60,3 +60,20 @@ test("planTriage: a memory marked not relevant in the inspector is ranked lower"
   assert.equal(before.action, "promote");
   assert.notEqual(after.action, "promote", "three not-relevant marks keep it out of active");
 });
+
+test("structured policy (default): sentences stay drafts, recall still finds them; evidence policy promotes", async () => {
+  const { searchMemories } = require("../dist/engine/retrieve/search.js");
+  const strong = { kind: "decision", content: "Kita pakai Redis daripada Memcached karena butuh TTL per key dan pub/sub.", importance: 0.6 };
+  dbmod.setSetting("tier0Promote", "structured");
+  assert.notEqual(evidenceTriage(strong).decision, "active", "a sentence is not served proactively by default");
+  assert.equal(evidenceTriage({ ...strong, content: "Keputusan: " + strong.content }).decision, "active", "self-labelled lines still are");
+  dbmod.setSetting("tier0Promote", "evidence");
+  assert.equal(evidenceTriage(strong).decision, "active");
+  dbmod.setSetting("tier0Promote", "structured");
+
+  const pid = dbmod.ensureProject("evid-recall", "/tmp/evid-recall");
+  const id = dbmod.insertMemory({ projectId: pid, kind: "decision", content: "Pakai pgbouncer transaction mode untuk Neon karena koneksi serverless", importance: 0.6, createdAt: Date.now(), sourceTool: "claude", status: "draft", origin: "heuristic" });
+  assert.ok(!searchMemories("pgbouncer transaction mode neon", { limit: 5 }).some((h) => h.id === id), "drafts are not in default search");
+  const hit = searchMemories("pgbouncer transaction mode neon", { limit: 5, includeDrafts: true }).find((h) => h.id === id);
+  assert.ok(hit && hit.draft === true, "recall (includeDrafts) finds and marks it");
+});

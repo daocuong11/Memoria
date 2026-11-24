@@ -20,7 +20,11 @@ export interface SearchHit {
   stale?: boolean;
   /** Built from a structured session event (todo, verifier run, commit). */
   fromEvent?: boolean;
+  /** Not reviewed or promoted yet (only when the caller asked for drafts). */
+  draft?: boolean;
 }
+
+const DRAFT_FACTOR = 0.85;
 
 const STALE_FACTOR = 0.7;
 
@@ -112,11 +116,11 @@ function ftsQuery(query: string, mode: "and" | "or"): string {
   return tokens.map((t) => `"${t.replace(/"/g, '""')}"`).join(mode === "and" ? " " : " OR ");
 }
 
-function ftsSelect(match: string, kind?: string): Memory[] {
+function ftsSelect(match: string, kind?: string, includeDrafts = false): Memory[] {
   const where = [
     "id IN (SELECT rowid FROM memories_fts WHERE memories_fts MATCH ? ORDER BY bm25(memories_fts) LIMIT 200)",
     "archived = 0",
-    "status = 'active'",
+    includeDrafts ? "status IN ('active', 'draft')" : "status = 'active'",
   ];
   const params: Array<string | number> = [match];
   if (kind) {
@@ -129,18 +133,18 @@ function ftsSelect(match: string, kind?: string): Memory[] {
 /** null = fallback ke jalur legacy (token kosong / query FTS error / FTS tak
  * menemukan apa pun — menjaga recall typo fuzzy editDistance yang tak bisa
  * dilakukan FTS, dengan biaya scan penuh hanya pada query yang kosong). */
-function ftsCandidates(query: string, kind?: string): Memory[] | null {
+function ftsCandidates(query: string, kind?: string, includeDrafts = false): Memory[] | null {
   const qAnd = ftsQuery(query, "and");
   const qOr = ftsQuery(query, "or");
   if (!qAnd && !qOr) return null;
   try {
     if (qAnd) {
-      const rows = ftsSelect(qAnd, kind);
+      const rows = ftsSelect(qAnd, kind, includeDrafts);
       if (rows.length) return rows;
     }
     // Semua token wajib hadir terlalu ketat → longgarkan ke OR.
     if (qOr) {
-      const rows = ftsSelect(qOr, kind);
+      const rows = ftsSelect(qOr, kind, includeDrafts);
       if (rows.length) return rows;
     }
     return null;
@@ -151,14 +155,16 @@ function ftsCandidates(query: string, kind?: string): Memory[] | null {
 
 export function searchMemories(
   query: string,
-  opts: { limit?: number; projectSlug?: string; kind?: string; embedModel?: string; since?: number } = {},
+  opts: { limit?: number; projectSlug?: string; kind?: string; embedModel?: string; since?: number; includeDrafts?: boolean } = {},
   queryEmbedding?: number[] | null
 ): SearchHit[] {
   const limit = opts.limit ?? 10;
   retireExpired(Date.now(), { minIntervalMs: 60_000 });
   // Kandidat dari FTS5; null (token kosong/query error) → scan legacy penuh,
   // jadi hasil tidak pernah lebih buruk dari implementasi lama.
-  const memories = ftsCandidates(query, opts.kind) ?? allMemories();
+  const memories =
+    ftsCandidates(query, opts.kind, !!opts.includeDrafts) ??
+    (opts.includeDrafts ? readMemories("WHERE archived = 0 AND status IN ('active', 'draft') ORDER BY created_at DESC", []) : allMemories());
   const hits: SearchHit[] = [];
   const now = Date.now();
   const centrality = loadCentrality();
@@ -197,7 +203,9 @@ export function searchMemories(
         sourceTool: m.sourceTool,
         projectSlug: projectSlugById(m.projectId),
         // Superseded decisions stay searchable (history) but rank lower.
-        score: (m.validTo || 0) > 0 ? score * 0.6 : score,
+        // Superseded decisions and unreviewed drafts rank lower.
+        score: ((m.validTo || 0) > 0 ? score * 0.6 : score) * (m.status === "draft" ? DRAFT_FACTOR : 1),
+        draft: m.status === "draft",
         superseded: (m.validTo || 0) > 0,
         fromEvent: (m.sourceEventId || 0) > 0,
       });

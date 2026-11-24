@@ -54,6 +54,11 @@ seluruh temuan high/medium penting diperbaiki di rilis ini.
 - **Old Claude Code tool output no longer counts as something you said.** Before v0.12 every tool result (file reads, shell output, edit receipts) was stored with role `user`. Migration v11 re-labels those rows as `tool` or `system` from their text, in Claude sessions written by the old parser only. Checked against 8,068 rows whose original jsonl still exists: 96.9% of tool output leaves `user`, 96.9% of typed messages stay `user`, and rows labelled `user` went from 21% to 85% correct. The session's "last user request" in snapshots was right in 5 of 15 labelled sessions before and 13 of 14 after; 8 of 78 automatic task closures came only from tool output and no longer happen.
 - **Snapshot before migrations.** When a schema migration is pending, the database is first copied to `backups/memory-pre-v<N>-<time>.db` with `VACUUM INTO`.
 
+### Structured-first promotion (Tier 0)
+- **What Memoria hands agents unasked is now only structured evidence.** That covers memories from session events (todos, answered questions, verifier error→fix, commits), self-labelled lines (`TODO:`, `Keputusan:`), memories saved with `remember`, and drafts confirmed in two sessions. These feed the resume block, `project_context` and `build_context`. Other Tier 0 sentences stay drafts. Drafts with strong evidence no longer expire, and **`recall` still searches drafts**, ranked a little lower and marked "draft: not reviewed".
+- Why: on a new blind sample from the current pipeline, sentences promoted by the evidence score were 42% precise. After refitting the score on a new tuning sample, no threshold or memory kind reached 70%. The structured set measured 95.6% (80.5% without todos). Recall on held-out targets is unchanged at 55% hit@5 (MRR 0.35 against 0.42).
+- `tier0Promote = evidence` restores promotion by the evidence score.
+
 ### Commits close tasks; event memories are marked
 - A `fix:` or `feat:` commit marks an open task done when most of the task's keywords (at least two) appear in the commit subject.
 - `recall` labels memories built from a structured session event with "from event".
