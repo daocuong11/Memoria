@@ -49,17 +49,32 @@ export function recordScan(tool: string, o: ScanOutcome): void {
   }
 }
 
-/** Newest mtime under a path (file or directory, a few levels deep, capped). */
-export function newestMtime(p: string, depth = 4, budget = { n: 20000 }): number {
+/** Which files count as "the tool wrote a session" per tool. Without this,
+ * config files, IDE state databases and other tools' data sharing a folder
+ * (~/.gemini also holds Antigravity) made a tool look "behind". */
+const SESSION_FILES: Record<string, { file: RegExp; skip?: RegExp }> = {
+  claude: { file: /\.jsonl$/ },
+  codex: { file: /\.jsonl$/ },
+  gemini: { file: /\.jsonl?$/, skip: /antigravity|[\\/](?:config|bin|logs|node_modules)(?:[\\/]|$)/ },
+  opencode: { file: /opencode\.db$/ },
+  copilot: { file: /session-store\.db$/ },
+  antigravity: { file: /\.(?:jsonl?|md|pb|log)$/ },
+  vscode: { file: /chatSessions[\\/][^\\/]+\.jsonl?$/ },
+  cursor: { file: /chatSessions[\\/][^\\/]+\.jsonl?$|state\.vscdb$/ },
+  windsurf: { file: /chatSessions[\\/][^\\/]+\.jsonl?$|state\.vscdb$/ },
+};
+
+/** Newest mtime of session files under a path (a few levels deep, capped). */
+export function newestMtime(p: string, depth = 5, budget = { n: 20000 }, filter: { file: RegExp; skip?: RegExp } = { file: /\.(jsonl|json|db|vscdb|md)$/ }): number {
   let st: fs.Stats;
   try {
     st = fs.statSync(p);
   } catch {
     return 0;
   }
-  if (!st.isDirectory()) return st.mtimeMs;
+  if (!st.isDirectory()) return filter.file.test(p) ? st.mtimeMs : 0;
   let best = 0;
-  if (depth <= 0) return st.mtimeMs;
+  if (depth <= 0) return 0;
   let entries: fs.Dirent[] = [];
   try {
     entries = fs.readdirSync(p, { withFileTypes: true });
@@ -70,7 +85,8 @@ export function newestMtime(p: string, depth = 4, budget = { n: 20000 }): number
     if (--budget.n <= 0) break;
     if (e.name === "node_modules" || e.name.startsWith(".git")) continue;
     const full = path.join(p, e.name);
-    const m = e.isDirectory() ? newestMtime(full, depth - 1, budget) : e.isFile() && /\.(jsonl|json|db|vscdb|md)$/.test(e.name) ? safeMtime(full) : 0;
+    if (filter.skip?.test(full)) continue;
+    const m = e.isDirectory() ? newestMtime(full, depth - 1, budget, filter) : e.isFile() && filter.file.test(full) ? safeMtime(full) : 0;
     if (m > best) best = m;
   }
   return best;
@@ -90,7 +106,8 @@ export function captureHealth(now = Date.now()): ToolHealth[] {
   for (const src of getConfig().sources) {
     const enabled = getBoolSetting(`source:${src.tool}:enabled`, src.enabled);
     const found = src.paths.some((p) => fs.existsSync(p));
-    const sourceUpdatedAt = found ? Math.max(...src.paths.map((p) => newestMtime(p))) : 0;
+    const filter = SESSION_FILES[src.tool];
+    const sourceUpdatedAt = found ? Math.max(...src.paths.map((p) => newestMtime(p, 5, { n: 20000 }, filter))) : 0;
     const t = d
       .prepare("SELECT MAX(ts) AS last, SUM(CASE WHEN ts >= ? THEN 1 ELSE 0 END) AS week FROM transcripts WHERE tool = ?")
       .get(now - 7 * DAY, src.tool) as { last: number | null; week: number | null };
@@ -118,14 +135,16 @@ export function captureHealth(now = Date.now()): ToolHealth[] {
     } else if (scan.ok === false) {
       status = "error";
       reason = `last scan failed: ${scan.detail || "unknown error"}`;
+    } else if (!lastStoredAt) {
+      // Nothing stored: either no session was ever held in this tool (empty
+      // chat files are common) or the parser does not understand them.
+      status = "idle";
+      reason = sourceUpdatedAt
+        ? "session files found but nothing stored yet: run `memoria scan`; if it stays empty, the files hold no messages or their format is not understood"
+        : "no session files yet";
     } else if (sourceUpdatedAt - lastStoredAt > BEHIND_MS) {
       status = "behind";
-      reason = lastStoredAt
-        ? `the tool wrote data ${Math.round((sourceUpdatedAt - lastStoredAt) / DAY)} day(s) after the last stored message`
-        : "the tool has data but nothing was stored yet";
-    } else if (!lastStoredAt) {
-      status = "idle";
-      reason = "no sessions yet";
+      reason = `the tool wrote sessions ${Math.round((sourceUpdatedAt - lastStoredAt) / DAY)} day(s) after the last stored message`;
     } else {
       status = "ok";
       reason = (scan.fileErrors || 0) > 0 ? `${scan.fileErrors} file(s) could not be read` : "";

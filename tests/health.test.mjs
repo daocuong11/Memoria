@@ -31,10 +31,10 @@ const iso = (s) => new Date(Date.now() - 3 * 86_400_000 + s * 1000).toISOString(
 fs.writeFileSync(good, JSON.stringify({ type: "user", sessionId: "h1", cwd: "/tmp/health-proj", timestamp: iso(1), message: { content: "Tambahkan health check" } }) + "\n");
 const health = (tool) => captureHealth().find((h) => h.tool === tool);
 
-test("behind before the first scan, ok after; missing tools are reported as missing", async () => {
+test("idle before the first scan, ok after, behind when the tool writes on; missing tools reported", async () => {
   const before = health("claude");
-  assert.equal(before.status, "behind");
-  assert.match(before.reason, /nothing was stored yet/);
+  assert.equal(before.status, "idle");
+  assert.match(before.reason, /memoria scan/);
   assert.equal(health("codex").status, "missing");
   await scanClaude(path.join(home, ".claude", "projects"));
   // The file was written now, the message is 3 days old: behind by mtime.
@@ -42,6 +42,20 @@ test("behind before the first scan, ok after; missing tools are reported as miss
   const after = health("claude");
   assert.equal(after.status, "ok", after.reason);
   assert.equal(after.stored7d, 1);
+  // The tool keeps writing (file touched now), nothing new stored: behind.
+  fs.utimesSync(good, new Date(), new Date());
+  assert.equal(health("claude").status, "behind");
+  fs.utimesSync(good, new Date(Date.now() - 3 * 86_400_000), new Date(Date.now() - 3 * 86_400_000));
+});
+
+test("files that are not sessions do not make a tool look behind", () => {
+  // ~/.gemini also holds Antigravity data and config: only Gemini CLI chats count.
+  fs.mkdirSync(path.join(home, ".gemini", "antigravity", "brain"), { recursive: true });
+  fs.writeFileSync(path.join(home, ".gemini", "antigravity", "brain", "x.jsonl"), "{}\n");
+  fs.mkdirSync(path.join(home, ".gemini", "config"), { recursive: true });
+  fs.writeFileSync(path.join(home, ".gemini", "config", "config.json"), "{}");
+  const g = health("gemini");
+  assert.equal(g.sourceUpdatedAt, 0, "antigravity and config files are not Gemini sessions");
 });
 
 test("one unreadable file does not stop the scan; its count is reported", async () => {
