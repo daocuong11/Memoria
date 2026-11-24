@@ -61,7 +61,7 @@ memakai pipe sehingga exit code tertutup.
 9. Q1 Perbaiki peran data lama (≥1.743 baris tool tercatat `user`), snapshot dulu, triage ulang. Target noise terbuang +5 poin. — **Hasil di Q1 di bawah.**
 10. Q1.5 Retrieval inspector: log lokal (≤500 entri, diredaksi, tidak di-sync) + tab dashboard + "tandai tidak relevan". — **Selesai (migrasi v12):** `recall`/`project_context`/`build_context`/`file_context` tercatat; tanda disimpan di `retrieval_feedback` dan tetap ada walau log dihapus (bahan Q4). Biaya 0,1 ms per panggilan.
 11. Q2-schema Migrasi v13: tabel lokal `session_events` (tidak di-sync); kolom opsional di `memories`: `source_event_id`, `git_branch`, **`git_commit`**, `memory_class` (`working`/`durable`), `expires_at`; test kompatibilitas bundle. — **Selesai (migrasi v13):** `insertSessionEvent`/`sessionEvents` (idempoten per `source_ref`, payload diredaksi); metadata ikut payload sync kecuali `source_event_id`; bundle lama tanpa metadata tidak menghapus nilai lokal. `scripts/compat-sync.mjs` diuji dua arah dengan rilis v0.16.3 (skema v10): 8/8 lolos — wajib dijalankan lagi sebelum rilis (langkah 25).
-12. Q2a Todo (`TodoWrite`/`Task*`/`update_plan`, opencode `todowrite`/`todo`) dengan status asli; jawaban pertanyaan bersubstansi → `decision`, persetujuan sesaat → working; judul `ai-title`/`session.title`, recap `wrap_up`. Target todo tertangkap ≥90%.
+12. Q2a Todo (`TodoWrite`/`Task*`/`update_plan`, opencode `todowrite`/`todo`) dengan status asli; jawaban pertanyaan bersubstansi → `decision`, persetujuan sesaat → working; judul `ai-title`/`session.title`, recap `wrap_up`. Target todo tertangkap ≥90%. — **Selesai:** todo tertangkap **0,2% → 100%** (548 item: Claude `update_plan` 210, opencode `todowrite` + tabel `todo` 338; status benar 100%). Jawaban pertanyaan → 87 `decision` durable, ketepatan 64% (label agen, bukan pemilik; 56 dari 58 keputusan yang benar tertangkap, sebelumnya 2). Judul sesi jadi event. **Belum:** `Task*` Claude (tidak ada di data, bentuknya belum pasti), recap `wrap_up` (tidak ada di data).
 13. Q2b Error→fix: allowlist verifier, gagal dari **isi output** (+exit code), normalisasi perintah, wajib baris error + file kode; verifier gagal di akhir sesi → task "belum beres"; file dari Edit/Write; commit `fix:`/`feat:`; branch + commit; redaksi stdout/stderr. Target ketepatan ≥90% (semua pasangan lolos filter ±46 + 20 yang ditolak).
 14. Q-backfill Proses ulang 28 sesi Claude + 52 sesi opencode, idempoten.
 
@@ -93,7 +93,7 @@ Resources, parameter `feedback` di tool MCP, compaction tanpa LLM.
 | Memori asli tersimpan | 75% (62–84%), held-out v2 | ≥90% |
 | Memori bagus terjangkau | 13/32 | ≥26/32 |
 | Recall hit@5 (a) sekarang / (b) promosi ideal | 26% / 72% (50 query) | ≥70% / ≥80% |
-| Todo tertangkap | 1% | ≥90% |
+| Todo tertangkap | 0,2% → **100%** (548 item) | ≥90% |
 | Ketepatan error→fix | ≈94% (sampel, belum diimplementasi) | ≥90% |
 | Memori basi disajikan | belum diukur | <5% |
 | Token per sesi (tool + resume) | ≈2.000 | <1.200 |
