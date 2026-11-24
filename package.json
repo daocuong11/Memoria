@@ -113,7 +113,7 @@
       ],
       "icon": "build/icon.png",
       "category": "Utility",
-      "synopsis": "Second brain offline untuk AI coding tools",
+      "synopsis": "Offline second brain for AI coding tools",
       "maintainer": "Memoria <memoria@localhost>",
       "desktop": {
         "entry": {

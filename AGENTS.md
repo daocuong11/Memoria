@@ -100,6 +100,13 @@ ulang konteks.
 - String UI: English sebagai kunci `t()`, terjemahan di `web/i18n.js`; tanpa emoji.
 - Repo, kode, PR, CHANGELOG, README.md: English. README.id.md, ROADMAP.md,
   AGENTS.md: Indonesia.
+- **Rilis wajib full English** (keputusan pemilik): semua yang tampil di rilis
+  publik — CHANGELOG (termasuk header & seksi lama), body PR rilis, subjek
+  commit (masuk ke body GitHub Release lewat `build.yml`), pesan tag, metadata
+  paket (`description`, `synopsis` di package.json, `server.json`), teks
+  default UI (EN; terjemahan ID hanya lewat `web/i18n.js`). Sebelum tag,
+  cek tidak ada kalimat Indonesia di seksi CHANGELOG versi itu dan di
+  `git log vPrev..HEAD`. Komentar kode Indonesia lama boleh tetap.
 - Glama memakai Build steps `npm install -g @xinzzu/memoria@latest` + Auto-Release;
   nomor versi Glama bisa mendahului npm (ada 0.16.4 di Glama) — rilis berikutnya 0.17.0.
 
