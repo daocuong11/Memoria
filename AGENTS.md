@@ -1,5 +1,5 @@
 # Handoff Proyek: Memoria — second brain offline untuk AI coding tools
-> Diperbarui manual — 2026-11-23 (repo: github.com/xinzzu/Memoria, MIT)
+> Diperbarui manual — 2026-11-24 (repo: github.com/xinzzu/Memoria, MIT)
 >
 > Bagian ini ditulis manual dan **di luar** marker `memoria:start/end`. Blok di
 > antara marker di bawah ditimpa otomatis oleh Memoria (resume sesi); jangan
@@ -72,7 +72,13 @@ ulang konteks.
   nomor versi Glama bisa mendahului npm (ada 0.16.4 di Glama) — rilis berikutnya 0.17.0.
 
 ## Next
-Lihat `ROADMAP.md` → POSISI TERKINI → backlog.
+**Fase kualitas v0.18 (fitur dibekukan).** Rencana lengkap 25 langkah, aturan
+main, dan gerbang angka: `ROADMAP.md` → POSISI TERKINI. Ringkas:
+- Setiap PR kualitas wajib angka sebelum/sesudah (eval privat `.eval-private/`).
+- Fokus Claude Code + opencode; capture event terstruktur (todo, pertanyaan,
+  error→fix dari **isi output**, file, commit) sebelum menyentuh heuristik kalimat.
+- Kolom baru di `memories` selalu opsional; event mentah tidak pernah di-sync.
+- Refactor `db.ts`/`http.ts`/`app.js` dan fitur baru dibekukan sampai v0.18.
 
 <!-- memoria:start -->
 _(Blok resume otomatis Memoria akan muncul di sini.)_
