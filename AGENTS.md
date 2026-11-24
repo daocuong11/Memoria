@@ -27,8 +27,9 @@ ulang konteks.
   pertanyaan / verifier / commit sebagai event, backfill, ekstraksi per giliran,
   skor bukti, lifecycle, retensi + redaksi kunci (v14), tool lite, kesehatan
   capture, `memoria doctor`, `PRIVACY.md`.
-- **Gerbang langkah 17 gagal untuk Tier 0** (ketepatan aktif 42%); keputusan
-  pemilik tertunda — lihat ROADMAP. Rilis menunggu keputusan itu + "boleh rilis".
+- Gerbang langkah 17: kalimat Tier 0 tidak bisa ≥70% → pemilik memilih tanpa
+  LLM: promosi `structured` (set proaktif 95,6% dari event). Rilis v0.17.0
+  menunggu "boleh rilis" (README diposisikan sebagai alat serah terima kerja).
 - Kontributor luar: @bhavana4123 (README Hindi), @StreamLine-18 (landing),
   @jamesyshd19-cmyk (CLI unknown command), @daocuong11 (komentar handoff.ts).
 
@@ -79,6 +80,10 @@ ulang konteks.
 - Pengujian yang membaca sumber asli: panggil parser langsung (`scanClaude`,
   `scanOpencode`, `backfillEvents`). **Jangan `scanAll` dengan HOME asli** —
   sinyal limit menulis blok resume ke file proyek sungguhan.
+- Promosi Tier 0: `tier0Promote = structured` (bawaan) — kalimat heuristik tetap
+  draft; yang aktif hanya event/berlabel diri/`remember`/terkonfirmasi. `recall`
+  memakai `includeDrafts: true`; resume & `project_context` tidak. Alasan: gerbang
+  langkah 17 (ketepatan kalimat Tier 0 tidak bisa ≥70%).
 - Mode tool MCP: `MEMORIA_MCP_TOOLS=lite|full` atau setting `mcpTools`;
   batas output bawaan di `DEFAULT_CAPS` (`mcp/server.ts`).
 - Aturan noise struktural (shell/kode/output tool) → `NOISE_RULES` di `extract/noise.ts`;

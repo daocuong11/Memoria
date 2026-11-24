@@ -8,6 +8,7 @@
  * Semua perubahan dicatat di triage_log per batch → "Undo triage terakhir".
  * Hanya menyentuh draft origin=heuristic (draft LLM dari reviewMode tidak).
  * ------------------------------------------------------------------------- */
+import { ACTIVE_FROM } from "./evidence";
 import { randomUUID } from "node:crypto";
 import * as db from "../store/db";
 import { rescoreStored } from "./heuristic";
@@ -144,6 +145,7 @@ export function planTriage(opts: { now?: number; ttlDays?: number; projectId?: n
     keptByProject.set(pk, kept);
     // Tanggal dicatat untuk langkah TTL di bawah.
     (item as TriagePlanItem & { createdAt: number }).createdAt = r.created_at;
+    (item as TriagePlanItem & { evidence?: number }).evidence = t.evidence ?? 0;
   }
 
   // Corroboration + TTL untuk draft yang masih ragu.
@@ -156,7 +158,11 @@ export function planTriage(opts: { now?: number; ttlDays?: number; projectId?: n
         continue;
       }
       const createdAt = (k.item as TriagePlanItem & { createdAt?: number }).createdAt ?? now;
-      if (now - createdAt > ttl) {
+      // A draft with strong evidence is kept (searchable by recall) instead of
+      // expiring: under the structured promotion policy it is not served
+      // proactively, but it is worth finding when asked.
+      const strong = ((k.item as TriagePlanItem & { evidence?: number }).evidence ?? 0) >= ACTIVE_FROM;
+      if (!strong && now - createdAt > ttl) {
         k.item.action = "archive";
         k.item.reason = "expired";
       }
@@ -164,7 +170,8 @@ export function planTriage(opts: { now?: number; ttlDays?: number; projectId?: n
     // Inbox cap per project: the inbox must never grow without bound. Keep
     // the best-scoring uncertain drafts, archive the rest.
     const cap = draftCapPerProject();
-    const keep = list.filter((k) => k.item.action === "keep").sort((a, b) => b.item.score - a.item.score);
+    const ev = (k: { item: TriagePlanItem }): number => (k.item as TriagePlanItem & { evidence?: number }).evidence ?? 0;
+    const keep = list.filter((k) => k.item.action === "keep").sort((a, b) => ev(b) - ev(a) || b.item.score - a.item.score);
     for (const k of keep.slice(cap)) {
       k.item.action = "archive";
       k.item.reason = "over-cap";

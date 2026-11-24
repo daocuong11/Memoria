@@ -223,7 +223,7 @@ export function createMcpServer(): Server {
         const projRec = projInput ? resolveProject(projInput) : null;
         const results = searchMemories(
           query,
-          { limit: Number(a.limit || 8), embedModel: eprov.embedModel, projectSlug: projRec?.slug },
+          { limit: Number(a.limit || 8), embedModel: eprov.embedModel, projectSlug: projRec?.slug, includeDrafts: true },
           qEmb
         );
         if (!results.length) {
@@ -238,7 +238,7 @@ export function createMcpServer(): Server {
         const full = results
           .map(
             (r) =>
-              `[${r.kind}] (id ${r.id}, ${r.projectSlug ?? "global"}, ${r.sourceTool}, importance ${r.importance.toFixed(2)}${r.superseded ? ", SUPERSEDED by a newer decision" : ""}${r.stale ? ", stale: the files it names are gone" : ""}${r.fromEvent ? ", from event" : ""})\n${r.content}`
+              `[${r.kind}] (id ${r.id}, ${r.projectSlug ?? "global"}, ${r.sourceTool}, importance ${r.importance.toFixed(2)}${r.superseded ? ", SUPERSEDED by a newer decision" : ""}${r.stale ? ", stale: the files it names are gone" : ""}${r.fromEvent ? ", from event" : ""}${r.draft ? ", draft: not reviewed" : ""})\n${r.content}`
           )
           .join("\n\n");
         if (a.mode === "index") {
