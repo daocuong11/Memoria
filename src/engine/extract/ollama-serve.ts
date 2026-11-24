@@ -1,9 +1,43 @@
 import { spawn } from "node:child_process";
 import * as fs from "node:fs";
+import * as path from "node:path";
 import { getConfig } from "../config";
 import { ollamaAvailable } from "./ollama";
 
 let spawnedOnce = false;
+
+/** Resolve a bare command name against PATH; returns null when not installed. */
+export function findOnPath(cmd: string, envPath = process.env.PATH || ""): string | null {
+  const exts = process.platform === "win32"
+    ? (process.env.PATHEXT || ".EXE;.CMD;.BAT").split(";").filter(Boolean)
+    : [""];
+  for (const dir of envPath.split(path.delimiter)) {
+    if (!dir) continue;
+    for (const ext of exts) {
+      const full = path.join(dir, cmd + ext);
+      try {
+        if (fs.statSync(full).isFile()) return full;
+      } catch {
+        /* not here */
+      }
+    }
+  }
+  return null;
+}
+
+/** Spawn `bin serve` detached. Never throws; spawn errors (ENOENT, EACCES) are swallowed. */
+export function spawnServe(bin: string): boolean {
+  try {
+    const child = spawn(bin, ["serve"], { detached: true, stdio: "ignore", windowsHide: true });
+    child.on("error", () => {
+      /* Ollama missing or not executable: stay offline, never crash the app. */
+    });
+    child.unref();
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function ensureOllamaRunning(): Promise<boolean> {
   if (await ollamaAvailable()) return true;
@@ -13,22 +47,11 @@ export async function ensureOllamaRunning(): Promise<boolean> {
   const candidates = [cfg.ollamaPath, process.env.OLLAMA_PATH || "", "ollama"];
   for (const cand of candidates) {
     if (!cand) continue;
-    try {
-      const isFile = fs.existsSync(cand);
-      if (isFile || cand === "ollama") {
-        const child = spawn(isFile ? cand : "ollama", isFile ? ["serve"] : ["serve"], {
-          detached: true,
-          stdio: "ignore",
-          windowsHide: true,
-        });
-        child.unref();
-        for (let i = 0; i < 10; i++) {
-          await new Promise((r) => setTimeout(r, 1000));
-          if (await ollamaAvailable()) return true;
-        }
-      }
-    } catch {
-      continue;
+    const bin = fs.existsSync(cand) ? cand : cand === "ollama" ? findOnPath("ollama") : null;
+    if (!bin || !spawnServe(bin)) continue;
+    for (let i = 0; i < 10; i++) {
+      await new Promise((r) => setTimeout(r, 1000));
+      if (await ollamaAvailable()) return true;
     }
   }
   return false;
