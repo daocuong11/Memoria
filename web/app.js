@@ -180,7 +180,7 @@ function setView(name) {
     project: ["Project", t("One project - memories, tasks and activity in one place")],
     timeline: ["Timeline", t("Per-project activity trail")],
     handoff: ["Handoff", t("Context summary for the next AI session")],
-    tasks: ["Tasks", t("Everything your AI sessions promised - in one checklist")],
+    tasks: [t("Tasks"), t("Everything your AI sessions promised - in one checklist")],
     retrievals: [t("Retrievals"), t("What each MCP tool returned to your agents")],
     graph: ["Graph", t("Map of connections between memories")],
     integrations: [t("Integrations"), t("Register Memoria with your AI tools")],
@@ -301,7 +301,7 @@ async function loadStats() {
     $("#ollamaDot").className = "dot " + (ollama || engine ? "on" : "off");
     // Chip topbar kini menampilkan mesin aktif (bukan cuma status Ollama) —
     // user tanpa Ollama tetap melihat bahwa heuristik yang bekerja.
-    $("#ollamaText").textContent = engine ? engine.extract : (ollama ? t("Ollama: online") : t("Ollama: offline"));
+    $("#ollamaText").textContent = engine ? t(engine.extract) : (ollama ? t("Ollama: online") : t("Ollama: offline"));
     // Badge jumlah di tab pustaka memori
     const st2 = state.stats || {};
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
@@ -323,13 +323,13 @@ async function loadProjects() {
     const d = await api("/api/projects");
     state.projects = d.projects || [];
     const sel = $("#filterProject");
-    sel.innerHTML = '<option value="">All projects</option>';
+    sel.innerHTML = '<option value="">' + t("All projects") + '</option>';
     const hf = $("#hfProject");
-    hf.innerHTML = '<option value="">Pick a project…</option>';
+    hf.innerHTML = '<option value="">' + t("Pick a project…") + '</option>';
     const tl = $("#tlProject");
-    tl.innerHTML = '<option value="">Pick a project…</option>';
+    tl.innerHTML = '<option value="">' + t("Pick a project…") + '</option>';
     const gr = $("#grProject");
-    gr.innerHTML = '<option value="">All projects</option>';
+    gr.innerHTML = '<option value="">' + t("All projects") + '</option>';
     const tk = $("#tkProject");
     if (tk) {
       tk.innerHTML = '<option value="">' + t("All projects") + '</option>';
@@ -362,7 +362,7 @@ function renderOverview() {
   if (setupBox) {
     const checks = st ? [
       { ok: st.setup.toolsDetected > 0, label: t("AI tools detected"), hint: t("Use your AI tools, then run a scan") },
-      { ok: true, label: t("Engine") + ": " + st.setup.engineLabel, hint: "" },
+      { ok: true, label: t("Engine") + ": " + t(st.setup.engineLabel), hint: "" },
       { ok: st.setup.memoriesCount > 0, label: t("Memories created"), hint: t("Memories appear as sessions are extracted") },
     ] : null;
     if (!checks || checks.every((c) => c.ok)) {
@@ -732,7 +732,11 @@ function renderMemoryList(box, items) {
   if (!items || !items.length) {
     box.innerHTML = state.memTab === "draft"
       ? emptyState(t("Inbox is clean"), t("Memoria triages new drafts automatically. Nothing is waiting for you."))
-      : emptyState(t("No matching memories"), t("Try different keywords, or add a memory manually."));
+      : (state.search || state.filterKind || state.filterProject || state.filterTag || state.filterAge)
+        ? emptyState(t("No matching memories"), t("Try different keywords, or add a memory manually."))
+        : state.memTab === "archived"
+          ? emptyState(t("Archive is empty"), t("Memories you archive, and drafts that expire, end up here."))
+          : emptyState(t("No memories yet"), t("Memories appear here once your AI tools' sessions are scanned. You can also add one with Add."));
     if (state.memTab === "draft") {
       refreshTriageInfo();
       const groups = document.getElementById("draftGroups");
@@ -1135,7 +1139,7 @@ async function loadTags() {
     const d = await api("/api/tags");
     const sel = $("#filterTag");
     const cur = state.filterTag;
-    sel.innerHTML = '<option value="">All topics</option>';
+    sel.innerHTML = '<option value="">' + t("All topics") + '</option>';
     for (const t of d.tags || []) {
       const o = document.createElement("option");
       o.value = t.tag;
@@ -1234,7 +1238,12 @@ async function renderTimeline() {
   const mark = viewSeq('timeline');
   const slug = $("#tlProject").value;
   const box = $("#timelineBox");
-  if (!slug) { box.innerHTML = emptyState(t("Pick a project"), t("Pick a project above to see its activity trail.")); return; }
+  if (!slug) {
+    box.innerHTML = (state.projects || []).length
+      ? emptyState(t("Pick a project"), t("Pick a project above to see its activity trail."))
+      : emptyState(t("No projects yet"), t("Projects appear automatically as AI tools record activity."));
+    return;
+  }
   box.innerHTML = "<p class='muted' style='padding:20px'>Loading…</p>";
   try {
     if (tlMode === "git") {
@@ -1288,7 +1297,11 @@ async function loadCaptureHealth() {
         <span>${esc(h.label)}</span>
         ${h.lastStoredAt ? `<span class="sep">·</span><span>${esc(t("last stored {0}", fmtRel(h.lastStoredAt)))}</span>` : ""}
         ${h.stored7d || h.events7d ? `<span class="sep">·</span><span>${esc(t("7d: {0} messages, {1} events", h.stored7d, h.events7d))}</span>` : ""}
-        ${h.reason ? `<span class="sep">·</span><span class="muted">${esc(h.reason)}</span>` : ""}
+        ${h.status === "missing"
+          ? `<span class="sep">·</span><span class="muted" title="${esc(h.reason || "")}">${esc(t("not installed, or never used on this computer"))}</span>`
+          : h.status === "disabled"
+            ? `<span class="sep">·</span><span class="muted">${esc(t("turned off in Data sources"))}</span>`
+            : h.reason ? `<span class="sep">·</span><span class="muted">${esc(h.reason)}</span>` : ""}
       </div>`)
       .join("");
   } catch (e) {
@@ -1559,7 +1572,7 @@ async function renderGraph() {
     graph.labeled = new Set(labeled);
     $("#grCount").textContent = graph.nodes.length + t(" nodes · ") + graph.edges.length + t(" connections");
     if (!graph.nodes.length) {
-      $("#graphSide").innerHTML = '<div class="gs-empty">No memories to show yet. Run a scan + extraction first, or add memories manually.</div>';
+      $("#graphSide").innerHTML = '<div class="gs-empty">' + esc(t("No memories to show yet. Run a scan + extraction first, or add memories manually.")) + '</div>';
     } else {
       $("#graphSide").innerHTML = '<div class="gs-title">Details</div><div class="gs-empty">Click a node on the canvas to see its details and connections.</div>';
     }
