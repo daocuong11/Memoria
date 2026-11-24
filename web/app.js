@@ -1747,6 +1747,48 @@ async function loadSettingsToggles() {
   }
 }
 
+/* Backups list (Settings → Data). Lost in a refactor on 2026-11-05: Settings
+ * threw "loadBackups is not defined", which also stopped the sync status,
+ * device list and capture health from loading. */
+async function loadBackups() {
+  const box = $("#backupList");
+  if (!box) return;
+  try {
+    const d = await api("/api/backups");
+    const b = d.backups || [];
+    if (!b.length) {
+      box.innerHTML = `<div class="card-desc" style="margin-top:6px">${esc(t("No backups yet. Click \"Back up now\" to make the first one."))}</div>`;
+      return;
+    }
+    box.innerHTML = `<div class="card-desc" style="margin-top:2px">${esc(t("Stored backups:"))}</div>` +
+      b.map((x) => `
+        <div class="bup-row">
+          <div>
+            <div class="bup-name">${esc(x.name)}</div>
+            <div class="bup-meta">${(x.size / 1024 / 1024).toFixed(1)} MB · ${fmtDate(x.mtime)}</div>
+          </div>
+          <div class="spacer"></div>
+          <button class="btn" data-restore="${esc(x.path)}">${esc(t("Restore"))}</button>
+        </div>`).join("");
+    box.querySelectorAll("[data-restore]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (!confirm(t("Restore this backup? The current database is replaced."))) return;
+        btn.disabled = true;
+        try {
+          const r = await api("/api/backup/restore", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: btn.dataset.restore }) });
+          toast(r.ok ? t("Backup restored") : t("Failed to restore: ") + (r.message || ""), r.ok ? "ok" : "err");
+          if (r.ok) await Promise.all([loadStats(), loadProjects(), loadBackups()]);
+        } catch (e) {
+          toast(t("Failed to restore: ") + e.message, "err");
+        }
+        btn.disabled = false;
+      });
+    });
+  } catch (e) {
+    box.innerHTML = `<div class="card-desc" style="margin-top:6px">${esc(t("Failed to load backups: ") + e.message)}</div>`;
+  }
+}
+
 function wireSettingsToggles() {
   document.querySelectorAll(".toggle-row[data-key]").forEach((row) => {
     const key = row.dataset.key;

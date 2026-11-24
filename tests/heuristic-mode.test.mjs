@@ -85,6 +85,8 @@ test("dedupe: draft heuristik bisa di-link/merge oleh pipeline (tidak muncul di 
 });
 
 test("handoff/resume: fallback deterministik dari transkrip saat memori terstruktur kosong", async () => {
+  // Draft/transcript fallback only runs under the evidence promotion policy.
+  dbmod.setSetting("tier0Promote", "evidence");
   const pid3 = dbmod.ensureProject("users-mac-heurproj3", "/tmp/heurproj3");
   // hanya transkrip, tanpa memori aktif/draft terstruktur
   dbmod.insertTranscript({ tool: "cursor", sessionId: "s3", projectId: pid3, role: "user", content: "TODO: implement rate limit on /api/login and add tests", ts: Date.now() - 1000, seq: 1 });
@@ -95,6 +97,7 @@ test("handoff/resume: fallback deterministik dari transkrip saat memori terstruk
   const lines = resumeSectionLines(data);
   assert.ok(lines.join("\n").includes("SESSION RESUME"));
   assert.ok(lines.join("\n").includes("Open tasks") || lines.join("\n").includes("Locked decisions"));
+  dbmod.setSetting("tier0Promote", "structured");
 });
 
 test("task lifecycle: task_pending heuristik ditutup saat ada sinyal selesai", () => {
