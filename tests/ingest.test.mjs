@@ -1,6 +1,6 @@
 /* Fixture tests for every transcript parser: roles (tool output is never
  * stored as user/assistant speech), injected tags stripped, agent todo lists
- * kept as checklists, unique seq per message, and re-scans do not duplicate.
+ * stored as session events, unique seq per message, and re-scans do not duplicate.
  * Fixtures are synthetic but follow each tool's on-disk format. */
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -46,19 +46,22 @@ test("todosToChecklist: completed → [x], others → [ ], cancelled dropped", (
   );
 });
 
-test("claude: TodoWrite becomes a checklist row, tool_use-only message is not speech", async () => {
+test("claude: TodoWrite becomes a todo_list event (not a text row), tool_use-only message is not speech", async () => {
   const root = tmp("mem-claude-");
   const cwd = "/tmp/ingest-claude";
   jsonl(path.join(root, "p", "s.jsonl"), [
     { type: "user", sessionId: "c1", cwd, timestamp: iso(1), message: { content: "Tambahkan rate limit di login" } },
-    { type: "assistant", sessionId: "c1", cwd, timestamp: iso(2), message: { content: [{ type: "tool_use", name: "TodoWrite", input: { todos: [{ content: "Add rate limiter middleware", status: "in_progress" }, { content: "Write tests", status: "pending" }] } }] } },
+    { type: "assistant", sessionId: "c1", cwd, timestamp: iso(2), message: { content: [{ type: "tool_use", name: "TodoWrite", input: { todos: [{ content: "Add rate limiter middleware", status: "in_progress" }, { content: "Write tests", status: "pending" }] }, id: "tu1" }] } },
     { type: "user", sessionId: "c1", cwd, timestamp: iso(3), message: { content: [{ type: "tool_result", tool_use_id: "t", content: "Todos have been modified successfully" }] } },
     { type: "assistant", sessionId: "c1", cwd, timestamp: iso(4), message: { content: [{ type: "text", text: "Rate limiter ditambahkan." }] } },
   ]);
   await scanClaude(root);
   const r = rows("claude", "c1");
-  assert.deepEqual(r.map((x) => x.role), ["user", "assistant", "tool", "assistant"]);
-  assert.equal(r[1].content, "- [ ] Add rate limiter middleware\n- [ ] Write tests");
+  assert.deepEqual(r.map((x) => x.role), ["user", "tool", "assistant"]);
+  const ev = dbmod.sessionEvents({ tool: "claude", sessionId: "c1" });
+  assert.equal(ev.length, 1);
+  assert.equal(ev[0].type, "todo_list");
+  assert.deepEqual(ev[0].payload.items, [{ content: "Add rate limiter middleware", status: "in_progress" }, { content: "Write tests", status: "pending" }]);
   assertUniqueSeq(r);
 });
 
@@ -80,7 +83,7 @@ test("codex: injected context stripped, user + assistant roles, re-scan does not
   assert.equal(rows("codex", "x1").length, 2);
 });
 
-test("opencode: bash calls are tool rows, todowrite is a checklist, synthetic text skipped", () => {
+test("opencode: bash calls are tool rows, todowrite is an event, synthetic text skipped", () => {
   const dir = tmp("mem-opencode-");
   const file = path.join(dir, "opencode.db");
   const d = new DatabaseSync(file);
@@ -100,11 +103,13 @@ test("opencode: bash calls are tool rows, todowrite is a checklist, synthetic te
   d.close();
   scanOpencode(file);
   const r = rows("opencode", "o1");
-  assert.deepEqual(r.map((x) => x.role), ["user", "assistant", "assistant", "tool"]);
+  assert.deepEqual(r.map((x) => x.role), ["user", "assistant", "tool"]);
   assert.equal(r[0].content, "Buat mock mode untuk chat", "synthetic part not stored");
   assert.ok(!r[1].content.includes("[command]"), "assistant text no longer carries commands");
-  assert.equal(r[2].content, "- [x] Buat mockData.js\n- [ ] Routing live/mock");
-  assert.equal(r[3].content, "$ npm test");
+  assert.equal(r[2].content, "$ npm test");
+  const todo = dbmod.sessionEvents({ tool: "opencode", sessionId: "o1", types: ["todo_list"] });
+  assert.equal(todo.length, 1);
+  assert.deepEqual(todo[0].payload.items.map((i) => i.status), ["completed", "pending"]);
   assertUniqueSeq(r);
 });
 

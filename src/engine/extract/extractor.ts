@@ -68,8 +68,17 @@ export async function extractQueue(force = false, opts: { order?: "asc" | "desc"
     const embedProv = await getEmbedProvider();
     // order "desc" = sesi TERBARU diproses duluan — dipakai hot-path resume agar
     // konteks untuk pindah tool tersedia secepatnya, sisanya menyusul di background.
+    // Structured events first (todos, answered questions): explicit data, no
+    // sentence heuristics, so they do not wait for the transcript queue.
+    try {
+      const { materializeEvents } = await import("./events");
+      const ev = await materializeEvents((text) => embedProv.embed(text), { embedModel: embedProv.embedModel });
+      extracted += ev.created;
+    } catch {
+      /* non-blocking: transcript extraction still runs */
+    }
     const pending = getPendingExtraction(160, opts.order ?? "asc");
-    if (!pending.length) return 0;
+    if (!pending.length) return extracted;
     // Heuristik: sinyal kuat (task/decision/error-fix/fakta ber-entitas) dipromosikan
     // ke ACTIVE agar resume/recall/link lintas-AI langsung jalan saat limit-hopping;
     // sisanya tetap draft (review queue). Transparan via origin "heuristic".

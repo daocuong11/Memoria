@@ -5,9 +5,12 @@ import {
   insertTranscript,
   seqAllocator,
   ensureProject,
+  insertSessionEvent,
+  getDb,
 } from "../store/db";
+import { claudeQuestionEvent, claudeTitleEvent, claudeTodoEvents, type EventDraft } from "./events";
 import { withTx } from "../store/tx";
-import { walkFiles, safeJson, textFromContent, projectSlugFromCwd, readLinesIncremental, isToolResultOnly, stripInjectedTags, todosFromContent } from "./util";
+import { walkFiles, safeJson, textFromContent, projectSlugFromCwd, readLinesIncremental, isToolResultOnly, stripInjectedTags } from "./util";
 
 export async function scanClaude(root: string, log?: (msg: string) => void): Promise<{ files: number; lines: number }> {
   // A single transcript file is accepted too (Claude Code hooks pass transcript_path).
@@ -30,15 +33,28 @@ export async function scanClaude(root: string, log?: (msg: string) => void): Pro
     }
     const nextSeq = seqAllocator("claude");
     withTx(() => {
+      // Titles may come before the first message that names the project.
+      const projectOf = new Map<string, number>();
+      const lastTs = new Map<string, number>();
+      const titles: Array<{ sessionId: string; e: EventDraft }> = [];
+      const addEvent = (e: EventDraft, sessionId: string, projectId: number | null, ts: number, gitBranch: string): void => {
+        insertSessionEvent({ tool: "claude", sessionId, projectId, ts, type: e.type, sourceRef: e.sourceRef, payload: e.payload, gitBranch });
+      };
       for (const line of lines) {
         const j = safeJson(line);
         if (!j) continue;
+        const title = claudeTitleEvent(j);
+        if (title && j.sessionId) titles.push({ sessionId: String(j.sessionId), e: title });
         if (j.type !== "user" && j.type !== "assistant") continue;
         const ts = Date.parse(j.timestamp || "") || 0;
         const cwd = j.cwd || j.project_path;
         const sessionId = j.sessionId || j.session_id || "n/a";
         const projectId = ensureProject(projectSlugFromCwd(cwd), cwd);
+        projectOf.set(sessionId, projectId);
+        if (ts) lastTs.set(sessionId, ts);
         const rawContent = j.message?.content;
+        const eventTs = ts || Date.now();
+        const branch = typeof j.gitBranch === "string" ? j.gitBranch : "";
         // Peran sebenarnya: tool_result yang dibungkus pesan "user" → "tool";
         // pesan meta suntikan CLI (isMeta) → "system".
         const role = isToolResultOnly(rawContent) ? "tool" : j.isMeta ? "system" : j.type;
@@ -55,13 +71,19 @@ export async function scanClaude(root: string, log?: (msg: string) => void): Pro
           });
           totalLines++;
         }
-        // TodoWrite: the agent's own task list → a checklist row the heuristic
-        // extractor turns into task_pending / task_done memories.
-        const todos = j.type === "assistant" ? todosFromContent(rawContent) : "";
-        if (todos) {
-          insertTranscript({ tool: "claude", sessionId, projectId, role: "assistant", content: todos, ts: ts || Date.now(), seq: nextSeq(sessionId) });
-          totalLines++;
+        // Todo lists (TodoWrite, update_plan) and answered questions become
+        // session events; extract/events.ts turns them into memories with the
+        // agent's own status instead of guessing from a checklist text row.
+        if (j.type === "assistant") for (const e of claudeTodoEvents(rawContent)) addEvent(e, sessionId, projectId, eventTs, branch);
+        if (j.type === "user") {
+          const q = claudeQuestionEvent(j);
+          if (q) addEvent(q, sessionId, projectId, eventTs, branch);
         }
+      }
+      const knownProject = getDb().prepare("SELECT project_id AS p, MAX(ts) AS t FROM transcripts WHERE tool = 'claude' AND session_id = ?");
+      for (const t of titles) {
+        const known = projectOf.has(t.sessionId) ? null : (knownProject.get(t.sessionId) as { p: number | null; t: number | null } | undefined);
+        addEvent(t.e, t.sessionId, projectOf.get(t.sessionId) ?? known?.p ?? null, lastTs.get(t.sessionId) || known?.t || Date.now(), "");
       }
     });
     setSourceOffset("claude", file, finalOffset, mtime);
