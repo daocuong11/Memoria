@@ -55,6 +55,7 @@ seluruh temuan high/medium penting diperbaiki di rilis ini.
 - **Snapshot before migrations.** When a schema migration is pending, the database is first copied to `backups/memory-pre-v<N>-<time>.db` with `VACUUM INTO`.
 
 ### Fixed (found in the v0.16.3 → v0.17.0 upgrade test)
+- **Clearer dashboard on a fresh install.** Memories says "No memories yet" instead of "No matching memories" when nothing is filtered, and the archive has its own empty text. Timeline says "No projects yet" when there are none. Capture health shows "not installed, or never used on this computer" instead of a long temp path (the path stays in the tooltip). The Graph "Reset" button, project and topic filters, Graph empty text, Tasks title and engine label are now translated in both languages.
 - **No crash when Ollama is not installed.** Starting Ollama on a machine without it threw an uncaught `spawn ollama ENOENT` in the Electron main process and showed an error dialog (reported by the AppImage catalog test). Memoria now looks for `ollama` on `PATH` first and handles spawn errors, so it just stays on the offline extractor.
 - **Retrievals tab when empty:** no more row of zeros ("0 logged calls · 0 with no result · …") and no filter or clear button with nothing to filter. The tab now says what it is for, offers "Connect an AI tool", and says so when logging is paused.
 - **Settings no longer breaks on open.** A refactor on 5 Nov removed `loadBackups()`, so opening Settings threw, and the backup list, sync status, device list and capture health never loaded.
