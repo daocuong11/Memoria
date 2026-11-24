@@ -54,6 +54,11 @@ seluruh temuan high/medium penting diperbaiki di rilis ini.
 - **Old Claude Code tool output no longer counts as something you said.** Before v0.12 every tool result (file reads, shell output, edit receipts) was stored with role `user`. Migration v11 re-labels those rows as `tool` or `system` from their text, in Claude sessions written by the old parser only. Checked against 8,068 rows whose original jsonl still exists: 96.9% of tool output leaves `user`, 96.9% of typed messages stay `user`, and rows labelled `user` went from 21% to 85% correct. The session's "last user request" in snapshots was right in 5 of 15 labelled sessions before and 13 of 14 after; 8 of 78 automatic task closures came only from tool output and no longer happen.
 - **Snapshot before migrations.** When a schema migration is pending, the database is first copied to `backups/memory-pre-v<N>-<time>.db` with `VACUUM INTO`.
 
+### Session events and memory metadata (migration v13)
+- **`session_events`**: a local table for structured events from agent sessions (todos, questions, titles, verifier runs, file edits, commits). Inserts are idempotent per source id, payloads are redacted, and the table is never synced. Parsers start writing to it in the next steps.
+- **Optional memory columns**: `git_branch`, `git_commit`, `memory_class` (`working` / `durable`), `expires_at`, and a local `source_event_id`. All default to empty, so existing memories are unchanged.
+- **Sync stays compatible both ways.** The new fields travel as optional payload fields: older versions ignore them, and a bundle from an older version no longer resets them. `scripts/compat-sync.mjs` checks this against a released package; against v0.16.3 all 8 checks pass in both directions.
+
 ### Retrieval inspector (migration v12)
 - **See what your agents were given.** A new **Retrievals** tab lists the last 500 calls to `recall`, `project_context`, `build_context` and `file_context`: tool, project, query, and each returned memory with its rank and score. Calls that returned nothing are listed too.
 - **"Not relevant" marks.** Each returned memory can be marked not relevant (and unmarked). Marks are stored with their query and survive clearing the log; they will feed the evidence score in a later release.

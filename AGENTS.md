@@ -65,6 +65,10 @@ ulang konteks.
   daftarkan di `index.ts`). Tambah contoh di `tests/fixtures/heuristic-eval.json`
   → `npm run eval:heuristic`. Pola noise pengguna = substring, bukan regex.
 - `#overlay`/`#toast-wrap` wajib anak langsung `<body>` (dijaga `check:ui`).
+- Kolom/field sync baru: field payload memori **opsional**; versi lama mengabaikan
+  field asing, dan apply hanya menimpa field yang ada di payload. Cek dua arah
+  dengan rilis lama: `npm pack @xinzzu/memoria@<lama>` → `node scripts/compat-sync.mjs package/dist`.
+- `session_events` (lokal, tidak di-sync) — tulis lewat `insertSessionEvent`, unik per `(tool, session_id, source_ref)`.
 - String UI: English sebagai kunci `t()`, terjemahan di `web/i18n.js`; tanpa emoji.
 - Repo, kode, PR, CHANGELOG, README.md: English. README.id.md, ROADMAP.md,
   AGENTS.md: Indonesia.
