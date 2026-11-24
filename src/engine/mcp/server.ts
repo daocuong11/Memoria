@@ -7,7 +7,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { ensureDb } from "../ingest/manager";
 import { searchMemories, projectContext, touchMemories } from "../retrieve/search";
-import { ensureProject, memoryById, effectiveStatus, getDb, resolveProject, updateMemory, deleteMemory } from "../store/db";
+import { ensureProject, memoryById, effectiveStatus, getDb, getSetting, resolveProject, updateMemory, deleteMemory } from "../store/db";
 import { looksLikePath, projectSlugFromCwd } from "../ingest/util";
 import { getEmbedProvider } from "../extract/provider";
 import { relatedMemories } from "../graph";
@@ -57,6 +57,147 @@ function appVersion(): string {
   }
 }
 
+const KINDS = ["fact", "decision", "task_done", "task_pending", "error_fixed", "preference", "context"];
+const RO = { readOnlyHint: true, openWorldHint: false };
+
+/** "lite" = recall, project_context, remember (about a third of the tokens).
+ * Chosen with MEMORIA_MCP_TOOLS=lite in the MCP client config, or the
+ * `mcpTools` setting; default "full". */
+export function toolset(): "full" | "lite" {
+  const env = String(process.env.MEMORIA_MCP_TOOLS || "").toLowerCase();
+  if (env === "lite" || env === "full") return env;
+  try {
+    return getSetting("mcpTools", "full") === "lite" ? "lite" : "full";
+  } catch {
+    return "full";
+  }
+}
+
+/** Default output caps (characters) per tool; `maxChars` overrides. */
+export const DEFAULT_CAPS: Record<string, number> = {
+  recall: 4000,
+  project_context: 3000,
+  build_context: 4000,
+  file_context: 2500,
+  get_memory: 8000,
+  related: 3000,
+};
+
+export function capText(text: string, tool: string, maxChars?: unknown): string {
+  const n = Number(maxChars) > 0 ? Number(maxChars) : DEFAULT_CAPS[tool] || 0;
+  if (!n || text.length <= n) return text;
+  return text.slice(0, n - 1) + `…\n(truncated at ${n} chars; pass maxChars or use get_memory for full text)`;
+}
+
+export function toolList(mode: "full" | "lite"): Array<Record<string, unknown>> {
+  const recall = {
+    name: "recall",
+    annotations: { title: "Recall memories", ...RO },
+    description: "Search memories of earlier work (facts, decisions, tasks, fixed errors) across all AI tools. Call at session start.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Question or keywords" },
+        project: { type: "string", description: "Optional project path or name" },
+        limit: { type: "number", default: 8 },
+        ...(mode === "full"
+          ? {
+              maxChars: { type: "number", description: "Cap the result (default 4000)" },
+              mode: { type: "string", enum: ["full", "index"], default: "full", description: "index = one line per hit; details via get_memory" },
+            }
+          : {}),
+      },
+      required: ["query"],
+    },
+  };
+  const projectContext = {
+    name: "project_context",
+    annotations: { title: "Project context", ...RO },
+    description:
+      mode === "full"
+        ? "Latest decisions, open tasks and done work of a project. Default index mode: one line per memory with its id (get_memory for full text)."
+        : "Latest decisions, open tasks and done work of a project.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        project: { type: "string", description: "Project path or name" },
+        limit: { type: "number", default: 10 },
+        ...(mode === "full" ? { mode: { type: "string", enum: ["index", "full"], default: "index" } } : {}),
+      },
+      required: ["project"],
+    },
+  };
+  const remember = {
+    name: "remember",
+    annotations: { title: "Remember", readOnlyHint: false, destructiveHint: true, openWorldHint: false, idempotentHint: false },
+    description: "Store a decision, fact, preference or task so every AI tool knows it.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        kind: { type: "string", enum: KINDS },
+        content: { type: "string", description: "Short and dense" },
+        project: { type: "string", description: "Optional project path or name" },
+        ...(mode === "full" ? { importance: { type: "number", default: 0.5, description: "0..1" } } : {}),
+      },
+      required: ["kind", "content"],
+    },
+  };
+  if (mode === "lite") return [recall, projectContext, remember];
+  return [
+    recall,
+    projectContext,
+    {
+      name: "file_context",
+      annotations: { title: "File context", ...RO },
+      description: "Before editing a file: known errors, decisions, tasks and preferences that mention it.",
+      inputSchema: {
+        type: "object",
+        properties: { path: { type: "string" }, project: { type: "string" }, limit: { type: "number", default: 8 } },
+        required: ["path"],
+      },
+    },
+    {
+      name: "get_memory",
+      annotations: { title: "Get memories", ...RO },
+      description: "Full text of memories by id (ids from recall, project_context, related).",
+      inputSchema: { type: "object", properties: { ids: { type: "array", items: { type: "number" }, description: "Max 20" } }, required: ["ids"] },
+    },
+    remember,
+    {
+      name: "related",
+      annotations: { title: "Related memories", ...RO },
+      description: "Memories linked to one memory (by id, or the best match for a query).",
+      inputSchema: { type: "object", properties: { id: { type: "number" }, query: { type: "string" } } },
+    },
+    {
+      name: "update_memory",
+      annotations: { title: "Update memory", readOnlyHint: false, destructiveHint: true, openWorldHint: false },
+      description: "Correct a memory by id: new content (re-embedded), kind or importance.",
+      inputSchema: {
+        type: "object",
+        properties: { id: { type: "number" }, content: { type: "string" }, kind: { type: "string", enum: KINDS }, importance: { type: "number" } },
+        required: ["id"],
+      },
+    },
+    {
+      name: "forget",
+      annotations: { title: "Forget memory", readOnlyHint: false, destructiveHint: true, openWorldHint: false, idempotentHint: true },
+      description: "Delete a wrong or stale memory by id, or by query (a confident match is deleted, otherwise candidates are listed).",
+      inputSchema: { type: "object", properties: { id: { type: "number" }, query: { type: "string" } } },
+    },
+    {
+      name: "build_context",
+      annotations: { title: "Build context block", ...RO },
+      description: "One ready-to-use block for a project: brief, key memories, optional query matches and relations.",
+      inputSchema: {
+        type: "object",
+        properties: { project: { type: "string" }, query: { type: "string" }, maxChars: { type: "number", default: 4000 } },
+        required: ["project"],
+      },
+    },
+  ];
+}
+
 export function createMcpServer(): Server {
   ensureDb();
   const server = new Server(
@@ -64,149 +205,7 @@ export function createMcpServer(): Server {
     { capabilities: { tools: {} } }
   );
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: [
-      {
-        name: "recall",
-        annotations: { title: "Recall memories", readOnlyHint: true, openWorldHint: false },
-        description:
-          "Search memories of previous work by keywords/question. Returns facts, decisions, tasks and fixed errors. Call at session start!",
-        inputSchema: {
-          type: "object",
-          properties: {
-            query: { type: "string", description: "Question or keywords, e.g. \"why did the build fail\"" },
-            limit: { type: "number", default: 8, description: "Maximum number of results" },
-            project: { type: "string", description: "Optional — limit to one project (path or name)" },
-            maxChars: { type: "number", description: "Optional — cut the result at N characters to fit the context window" },
-            mode: { type: "string", enum: ["full", "index"], default: "full", description: "\"index\" = one line per hit with id; get details with get_memory" },
-          },
-          required: ["query"],
-        },
-      },
-      {
-        name: "project_context",
-        annotations: { title: "Project context", readOnlyHint: true, openWorldHint: false },
-        description:
-          "Return the latest context of a project: decisions, pending tasks, completed work. Default mode \"index\" returns one compact line per memory with its id (cheap on tokens); call get_memory with the ids you need for full text. Use mode \"full\" to get everything at once.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            project: { type: "string", description: "Project path or name" },
-            limit: { type: "number", default: 10, description: "Maximum number of memories" },
-            mode: { type: "string", enum: ["index", "full"], default: "index", description: "\"index\" = one line per memory with id; \"full\" = complete text" },
-          },
-          required: ["project"],
-        },
-      },
-      {
-        name: "file_context",
-        annotations: { title: "File context", readOnlyHint: true, openWorldHint: false },
-        description:
-          "Before editing a file, ask what is known about it: fixed errors, decisions, open tasks and preferences that mention this file path. Pass an absolute or relative path.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            path: { type: "string", description: "File path, e.g. src/engine/http.ts" },
-            project: { type: "string", description: "Optional — limit to one project (path or name)" },
-            limit: { type: "number", default: 8, description: "Maximum number of results" },
-          },
-          required: ["path"],
-        },
-      },
-      {
-        name: "get_memory",
-        annotations: { title: "Get memories", readOnlyHint: true, openWorldHint: false },
-        description: "Return the full text of specific memories by id (ids come from project_context, recall, or related).",
-        inputSchema: {
-          type: "object",
-          properties: {
-            ids: { type: "array", items: { type: "number" }, description: "Memory ids (max 20)" },
-          },
-          required: ["ids"],
-        },
-      },
-      {
-        name: "remember",
-        annotations: { title: "Remember", readOnlyHint: false, destructiveHint: true, openWorldHint: false, idempotentHint: false },
-        description: "Store an important memory (decision, fact, user preference, completed/pending task) so every tool remembers it.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            kind: {
-              type: "string",
-              enum: ["fact", "decision", "task_done", "task_pending", "error_fixed", "preference", "context"],
-              description: "Memory type: decision, fact, preference, open task (task_pending), finished task (task_done), fixed error (error_fixed) or general context",
-            },
-            content: { type: "string", description: "Memory content, short and dense" },
-            project: { type: "string", description: "Optional — project path or name; omit for a global memory" },
-            importance: { type: "number", default: 0.5, description: "0 to 1; higher ranks first in context" },
-          },
-          required: ["kind", "content"],
-        },
-      },
-      {
-        name: "related",
-        annotations: { title: "Related memories", readOnlyHint: true, openWorldHint: false },
-        description:
-          "Return memories connected (backlinks/similarity) to one memory. Use when recall context is incomplete or you need related detail. Pass a memory id or a text query.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            id: { type: "number", description: "Memory id from recall or project_context" },
-            query: { type: "string", description: "Or keywords: the closest memory is found first, then its connections are returned" },
-          },
-        },
-      },
-      {
-        name: "update_memory",
-        annotations: { title: "Update memory", readOnlyHint: false, destructiveHint: true, openWorldHint: false },
-        description:
-          "Correct an existing memory: replace its content (auto re-embedded so semantic search stays accurate), change its kind, or adjust importance. Pass the memory id from recall.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            id: { type: "number", description: "Memory id from recall" },
-            content: { type: "string", description: "Replacement content, short and dense" },
-            kind: {
-              type: "string",
-              enum: ["fact", "decision", "task_done", "task_pending", "error_fixed", "preference", "context"],
-              description: "Memory type: decision, fact, preference, open task (task_pending), finished task (task_done), fixed error (error_fixed) or general context",
-            },
-            importance: { type: "number", description: "New importance, 0 to 1" },
-          },
-          required: ["id"],
-        },
-      },
-      {
-        name: "forget",
-        annotations: { title: "Forget memory", readOnlyHint: false, destructiveHint: true, openWorldHint: false, idempotentHint: true },
-        description:
-          "Delete a stale or wrong memory. Pass the memory id for a direct delete, or a query: a confident match is deleted immediately, otherwise candidates are listed for you to pick an explicit id.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            id: { type: "number", description: "Memory id (direct delete)" },
-            query: { type: "string", description: "Keywords to find the memory to forget" },
-          },
-        },
-      },
-      {
-        name: "build_context",
-        annotations: { title: "Build context block", readOnlyHint: true, openWorldHint: false },
-        description:
-          "One ready-to-use context block for a project: auto-maintained project brief + key memories + optional query matches + 1-hop relations, capped to maxChars. Ideal first call at session start.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            project: { type: "string", description: "Project path or name" },
-            query: { type: "string", description: "Optional focus — matching memories are added to the block" },
-            maxChars: { type: "number", default: 6000, description: "Upper bound on the block size in characters" },
-          },
-          required: ["project"],
-        },
-      },
-    ],
-  }));
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: toolList(toolset()) }));
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
@@ -235,8 +234,7 @@ export function createMcpServer(): Server {
         }
         // PR-M: budget token — agent bisa membatasi panjang blok konteks agar
         // tidak melampaui context window-nya (default: tanpa batas).
-        const maxChars = Number(a.maxChars || 0);
-        const cap = (s: string): string => (maxChars > 0 && s.length > maxChars ? s.slice(0, maxChars - 1) + "…\n(truncated at maxChars=" + maxChars + ")" : s);
+        const cap = (s: string): string => capText(s, "recall", a.maxChars);
         const full = results
           .map(
             (r) =>
@@ -244,7 +242,7 @@ export function createMcpServer(): Server {
           )
           .join("\n\n");
         if (a.mode === "index") {
-          const idx = indexText(results);
+          const idx = cap(indexText(results));
           recordContextServed("recall", projRec?.id ?? null, idx.length, full.length);
           logRetrieval("recall", projRec?.id ?? null, query, results.map((r) => ({ id: r.id, score: r.score })), idx.length);
           return { content: [{ type: "text", text: idx }] };
@@ -281,7 +279,7 @@ export function createMcpServer(): Server {
           project,
           query: a.query ? String(a.query) : undefined,
           limit: Number(a.limit || 12),
-          maxChars: Number(a.maxChars || 6000),
+          maxChars: Number(a.maxChars || DEFAULT_CAPS.build_context),
           embedModel: eprov?.embedModel,
           queryEmbedding: qEmb,
         });
@@ -297,15 +295,16 @@ export function createMcpServer(): Server {
           logRetrieval("project_context", proj?.id ?? null, "", [], 0);
           return { content: [{ type: "text", text: `No memories stored for project "${a.project}".` }] };
         }
-        const full = results
-          .map((r) => `[${r.kind}] ${r.content}`)
-          .join("\n\n");
+        const full = capText(
+          results.map((r) => `[${r.kind}] ${r.content}`).join("\n\n"),
+          "project_context"
+        );
         if (a.mode === "full") {
           recordContextServed("project_context", proj?.id ?? null, full.length);
           logRetrieval("project_context", proj?.id ?? null, "", results.map((r) => ({ id: r.id })), full.length);
           return { content: [{ type: "text", text: full }] };
         }
-        const idx = indexText(results);
+        const idx = capText(indexText(results), "project_context");
         recordContextServed("project_context", proj?.id ?? null, idx.length, full.length);
         logRetrieval("project_context", proj?.id ?? null, "", results.map((r) => ({ id: r.id })), idx.length);
         return { content: [{ type: "text", text: idx }] };
@@ -318,7 +317,7 @@ export function createMcpServer(): Server {
           logRetrieval("file_context", null, p, [], 0);
           return { content: [{ type: "text", text: `No memories mention ${p}.` }] };
         }
-        const text = `Known about ${p}:\n` + hits.map((h) => `- #${h.id} [${h.kind}] ${h.content.replace(/\s+/g, " ")}`).join("\n");
+        const text = capText(`Known about ${p}:\n` + hits.map((h) => `- #${h.id} [${h.kind}] ${h.content.replace(/\s+/g, " ")}`).join("\n"), "file_context");
         touchMemories(hits.map((h) => h.id));
         recordContextServed("file_context", hits[0].projectId, text.length);
         logRetrieval("file_context", hits[0].projectId, p, hits.map((h) => ({ id: h.id })), text.length);
@@ -337,7 +336,7 @@ export function createMcpServer(): Server {
           const m = memoryById(id);
           parts.push(m ? `#${id} [${m.kind}] ${m.content}` : `#${id} not found`);
         }
-        const text = parts.join("\n\n");
+        const text = capText(parts.join("\n\n"), "get_memory");
         touchMemories(ids);
         recordContextServed("get_memory", null, text.length);
         return { content: [{ type: "text", text }] };
@@ -359,9 +358,7 @@ export function createMcpServer(): Server {
           return { content: [{ type: "text", text: `Memory has no related connections (id ${memId}).` }] };
         }
         const head = me ? `Source memory (${me.id}): ${me.content}\n\nConnected memories:\n` : `Connected memories (id ${memId}):\n`;
-        const text = head + rel
-          .map((r) => `- [${r.linkKind}] (id ${r.memory.id}) ${r.memory.content}`)
-          .join("\n");
+        const text = capText(head + rel.map((r) => `- [${r.linkKind}] (id ${r.memory.id}) ${r.memory.content}`).join("\n"), "related");
         return { content: [{ type: "text", text }] };
       }
       case "remember": {
