@@ -1,3 +1,4 @@
+import { logRetrieval } from "../retrieve/inspector";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -227,6 +228,7 @@ export function createMcpServer(): Server {
           qEmb
         );
         if (!results.length) {
+          logRetrieval("recall", projRec?.id ?? null, query, [], 0);
           return {
             content: [{ type: "text", text: "No matching memories. This is a fresh session - proceed with the user's task as usual." }],
           };
@@ -244,6 +246,7 @@ export function createMcpServer(): Server {
         if (a.mode === "index") {
           const idx = indexText(results);
           recordContextServed("recall", projRec?.id ?? null, idx.length, full.length);
+          logRetrieval("recall", projRec?.id ?? null, query, results.map((r) => ({ id: r.id, score: r.score })), idx.length);
           return { content: [{ type: "text", text: idx }] };
         }
         const text = full;
@@ -260,6 +263,7 @@ export function createMcpServer(): Server {
         }
         const withRel = cap(relLines.length ? `${text}\n\nRelated:\n${relLines.join("\n")}` : text);
         recordContextServed("recall", projRec?.id ?? null, withRel.length);
+        logRetrieval("recall", projRec?.id ?? null, query, results.map((r) => ({ id: r.id, score: r.score })), withRel.length);
         return { content: [{ type: "text", text: withRel }] };
       }
       case "build_context": {
@@ -271,7 +275,9 @@ export function createMcpServer(): Server {
         }
         const eprov = a.query ? await getEmbedProvider() : null;
         const qEmb = eprov && a.query ? await eprov.embed(String(a.query)) : null;
+        const servedIds: number[] = [];
         const block = buildContextBlock({
+          servedIds,
           project,
           query: a.query ? String(a.query) : undefined,
           limit: Number(a.limit || 12),
@@ -279,13 +285,16 @@ export function createMcpServer(): Server {
           embedModel: eprov?.embedModel,
           queryEmbedding: qEmb,
         });
-        recordContextServed("build_context", resolveProject(project)?.id ?? null, block.length);
+        const bcProject = resolveProject(project)?.id ?? null;
+        recordContextServed("build_context", bcProject, block.length);
+        logRetrieval("build_context", bcProject, a.query ? String(a.query) : "", servedIds.map((id) => ({ id })), block.length);
         return { content: [{ type: "text", text: block }] };
       }
       case "project_context": {
         const proj = resolveProject(String(a.project || ""));
         const results = proj ? projectContext(proj.slug, Number(a.limit || 10)) : [];
         if (!results.length) {
+          logRetrieval("project_context", proj?.id ?? null, "", [], 0);
           return { content: [{ type: "text", text: `No memories stored for project "${a.project}".` }] };
         }
         const full = results
@@ -293,10 +302,12 @@ export function createMcpServer(): Server {
           .join("\n\n");
         if (a.mode === "full") {
           recordContextServed("project_context", proj?.id ?? null, full.length);
+          logRetrieval("project_context", proj?.id ?? null, "", results.map((r) => ({ id: r.id })), full.length);
           return { content: [{ type: "text", text: full }] };
         }
         const idx = indexText(results);
         recordContextServed("project_context", proj?.id ?? null, idx.length, full.length);
+        logRetrieval("project_context", proj?.id ?? null, "", results.map((r) => ({ id: r.id })), idx.length);
         return { content: [{ type: "text", text: idx }] };
       }
       case "file_context": {
@@ -304,11 +315,13 @@ export function createMcpServer(): Server {
         if (!p) return { content: [{ type: "text", text: "path is required." }] };
         const hits = fileContext(p, { project: a.project ? String(a.project) : undefined, limit: Number(a.limit || 8) });
         if (!hits.length) {
+          logRetrieval("file_context", null, p, [], 0);
           return { content: [{ type: "text", text: `No memories mention ${p}.` }] };
         }
         const text = `Known about ${p}:\n` + hits.map((h) => `- #${h.id} [${h.kind}] ${h.content.replace(/\s+/g, " ")}`).join("\n");
         touchMemories(hits.map((h) => h.id));
         recordContextServed("file_context", hits[0].projectId, text.length);
+        logRetrieval("file_context", hits[0].projectId, p, hits.map((h) => ({ id: h.id })), text.length);
         return { content: [{ type: "text", text }] };
       }
       case "get_memory": {

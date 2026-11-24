@@ -1026,6 +1026,10 @@
           <span class="nav-ic"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="3.5" cy="4" r="1.6"/><circle cx="12.5" cy="3" r="1.6"/><circle cx="10" cy="11" r="1.6"/><circle cx="4" cy="12" r="1.6"/><path d="M5 4.8l5.8-1.2M3.7 5.6l1 4.3M9.2 10l1-7.4"/></svg></span>
           Graph
         </div>
+        <div class="nav-item" data-view="retrievals">
+          <span class="nav-ic"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"/><path d="M10.4 10.4L14 14M5 7h4M7 5v4"/></svg></span>
+          <span data-i18n="Retrievals">Retrievals</span>
+        </div>
         <div class="nav-label">System</div>
         <div class="nav-item" data-view="integrations">
           <span class="nav-ic"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M8 2v12M2 8h12"/></svg></span>
@@ -1228,6 +1232,23 @@
         </div>
 
         <!-- Tasks -->
+        <!-- Retrieval inspector -->
+        <div class="view" id="view-retrievals">
+          <div class="toolbar">
+            <select id="rtSource">
+              <option value="" data-i18n="All tools">All tools</option>
+              <option value="recall">recall</option>
+              <option value="project_context">project_context</option>
+              <option value="build_context">build_context</option>
+              <option value="file_context">file_context</option>
+            </select>
+            <label class="muted" style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="rtEnabled" /> <span data-i18n="Log retrievals">Log retrievals</span></label>
+            <button class="btn" id="rtClear" data-i18n="Clear log">Clear log</button>
+          </div>
+          <div class="card-desc" id="rtStats" style="margin:0 0 12px"></div>
+          <div id="retrievalsBox"></div>
+        </div>
+
         <div class="view" id="view-tasks">
           <div class="toolbar">
             <select id="tkProject"><option value="">All projects</option></select>

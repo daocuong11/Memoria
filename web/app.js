@@ -181,6 +181,7 @@ function setView(name) {
     timeline: ["Timeline", t("Per-project activity trail")],
     handoff: ["Handoff", t("Context summary for the next AI session")],
     tasks: ["Tasks", t("Everything your AI sessions promised - in one checklist")],
+    retrievals: [t("Retrievals"), t("What each MCP tool returned to your agents")],
     graph: ["Graph", t("Map of connections between memories")],
     integrations: [t("Integrations"), t("Register Memoria with your AI tools")],
     settings: [t("Settings"), t("Data sources and integrations")],
@@ -196,6 +197,7 @@ function setView(name) {
   if (name === "timeline") renderTimeline();
   if (name === "graph") renderGraph();
   if (name === "tasks") renderTasks();
+  if (name === "retrievals") renderRetrievals();
   if (name === "integrations") renderIntegrations();
   if (name === "settings") { renderSettings(); loadSettingsToggles(); loadBackups(); loadSyncStatus(); loadSyncDevices(); }
 }
@@ -1271,6 +1273,91 @@ async function renderTimeline() {
     box.innerHTML = emptyState(t("Failed to load"), esc(e.message));
   }
 }
+
+/* ---------- Retrieval inspector ----------
+ * Local log of what recall/project_context/build_context/file_context
+ * returned (last 500 calls, never synced). "Not relevant" marks feed the
+ * evidence score later. */
+
+async function renderRetrievals() {
+  const mark = viewSeq("retrievals");
+  const box = $("#retrievalsBox");
+  box.innerHTML = "<p class='muted' style='padding:20px'>Loading…</p>";
+  try {
+    const src = $("#rtSource").value;
+    const d = await api("/api/retrievals?limit=100" + (src ? "&source=" + encodeURIComponent(src) : ""));
+    if (!viewFresh(mark)) return;
+    const st = d.stats || {};
+    $("#rtEnabled").checked = st.enabled !== false;
+    $("#rtStats").textContent = t("{0} logged calls · {1} with no result · {2} marked not relevant", st.entries || 0, st.emptyResults || 0, st.irrelevantMarks || 0);
+    const entries = d.entries || [];
+    if (!entries.length) {
+      box.innerHTML = emptyState(t("No retrievals yet"), t("Calls from your agents to recall, project_context, build_context and file_context show up here."));
+      return;
+    }
+    box.innerHTML = `<div class="list">${entries.map((e) => `
+      <div class="card" style="margin-bottom:10px">
+        <div class="mem-meta">
+          <span class="mem-kind">${esc(e.source)}</span>
+          <span class="sep">·</span><span>${esc(e.project ? prettySlug(e.project) : t("all projects"))}</span>
+          <span class="sep">·</span><span>${fmtRel(e.ts)}</span>
+          <span class="sep">·</span><span>${esc(t("{0} chars", e.servedChars))}</span>
+        </div>
+        ${e.query ? `<div class="mem-content" style="margin:6px 0"><b>${esc(e.query)}</b></div>` : ""}
+        ${e.hits.length ? e.hits.map((h, i) => `
+          <div class="mem" style="padding:6px 0">
+            <div class="mem-rail"><span class="muted">${i + 1}</span></div>
+            <div class="mem-body">
+              <div class="mem-meta">
+                ${h.kind ? `<span class="mem-kind kind-${esc(h.kind)}">${esc(t(KIND_LABEL[h.kind] || h.kind))}</span>` : `<span class="mem-kind" style="opacity:.6">${esc(t("deleted"))}</span>`}
+                <span class="sep">·</span><span>#${h.id}</span>
+                ${h.score !== null ? `<span class="sep">·</span><span>${esc(t("score {0}", h.score.toFixed(2)))}</span>` : ""}
+                ${h.archived ? `<span class="sep">·</span><span>${esc(t("archived"))}</span>` : ""}
+              </div>
+              <div class="mem-content" style="${h.irrelevant ? "opacity:.55;text-decoration:line-through" : ""}">${esc(h.content || "")}</div>
+            </div>
+            <div class="mem-actions" style="opacity:1">
+              <button class="mem-approve" data-rt-log="${e.id}" data-rt-mem="${h.id}" data-rt-on="${h.irrelevant ? "0" : "1"}">${esc(h.irrelevant ? t("Undo") : t("Not relevant"))}</button>
+            </div>
+          </div>`).join("") : `<div class="muted" style="padding:6px 0">${esc(t("No result returned"))}</div>`}
+      </div>`).join("")}</div>`;
+  } catch (e) {
+    box.innerHTML = emptyState(t("Failed to load"), esc(e.message));
+  }
+}
+
+$("#retrievalsBox").addEventListener("click", async (ev) => {
+  const b = ev.target.closest("[data-rt-log]");
+  if (!b) return;
+  try {
+    await api("/api/retrievals/irrelevant", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ logId: Number(b.dataset.rtLog), memoryId: Number(b.dataset.rtMem), on: b.dataset.rtOn === "1" }),
+    });
+    renderRetrievals();
+  } catch (e) {
+    toast(e.message, "err");
+  }
+});
+$("#rtSource").addEventListener("change", renderRetrievals);
+$("#rtEnabled").addEventListener("change", async (ev) => {
+  try {
+    await api("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: "retrievalLog", value: ev.target.checked ? "1" : "0" }) });
+    toast(ev.target.checked ? t("Retrieval log on") : t("Retrieval log paused"));
+  } catch (e) {
+    toast(e.message, "err");
+  }
+});
+$("#rtClear").addEventListener("click", async () => {
+  if (!confirm(t("Clear the retrieval log? Not-relevant marks are kept."))) return;
+  try {
+    await api("/api/retrievals/clear", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    renderRetrievals();
+  } catch (e) {
+    toast(e.message, "err");
+  }
+});
 
 /* ---------- Handoff ---------- */
 

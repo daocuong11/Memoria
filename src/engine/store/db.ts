@@ -211,7 +211,36 @@ const MIGRATIONS: Migration[] = [
   { version: 9, name: "recover-seq-collision-loss", up: m9RecoverSeqLoss },
   { version: 10, name: "superseded-decisions", up: m10SupersededBy },
   { version: 11, name: "legacy-claude-roles", up: m11LegacyClaudeRoles },
+  { version: 12, name: "retrieval-log", up: m12RetrievalLog },
 ];
+
+/** M12: local log of what each context tool returned (retrieval inspector)
+ * and the "not relevant" marks made on it. Never synced; capped in
+ * retrieve/inspector.ts. Marks outlive the log row so they can later feed
+ * the evidence score. */
+function m12RetrievalLog(d: DatabaseSync): void {
+  d.exec(`
+    CREATE TABLE IF NOT EXISTS retrieval_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts INTEGER NOT NULL,
+      source TEXT NOT NULL,
+      project_id INTEGER,
+      query TEXT DEFAULT '',
+      hits TEXT DEFAULT '[]',
+      served_chars INTEGER DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_retrieval_log_ts ON retrieval_log(ts);
+    CREATE TABLE IF NOT EXISTS retrieval_feedback (
+      log_id INTEGER NOT NULL,
+      memory_id INTEGER NOT NULL,
+      verdict TEXT NOT NULL DEFAULT 'irrelevant',
+      query TEXT DEFAULT '',
+      ts INTEGER NOT NULL,
+      UNIQUE(log_id, memory_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_retrieval_feedback_memory ON retrieval_feedback(memory_id);
+  `);
+}
 
 /** M11: Claude Code sessions stored by the old parser have every tool result
  * under role `user` (see ingest/legacy-roles.ts). Only sessions without a

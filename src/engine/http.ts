@@ -345,6 +345,20 @@ export function startHttpServer(): Promise<void> {
           if (m) emitEvent("memory_approved", { count: 1, items: [{ kind: m.kind, project: projectSlugById(m.projectId), content: m.content }] });
         }
         sendJson(res, ok ? 200 : 404, { ok });
+      } else if (url.pathname === "/api/retrievals" && req.method === "GET") {
+        const { listRetrievals, retrievalStats } = await import("./retrieve/inspector");
+        const limit = numParam(url.searchParams.get("limit") ?? undefined, 50, 1, 500);
+        sendJson(res, 200, { entries: listRetrievals(limit, String(url.searchParams.get("source") || "")), stats: retrievalStats() });
+      } else if (url.pathname === "/api/retrievals/irrelevant" && req.method === "POST") {
+        const { markIrrelevant } = await import("./retrieve/inspector");
+        const body = await readBody(req);
+        const ok = markIrrelevant(Number(body.logId || 0), Number(body.memoryId || 0), body.on !== false);
+        sendJson(res, ok ? 200 : 404, { ok });
+      } else if (url.pathname === "/api/retrievals/clear" && req.method === "POST") {
+        const { clearRetrievalLog } = await import("./retrieve/inspector");
+        const body = await readBody(req);
+        clearRetrievalLog(body.withMarks === true);
+        sendJson(res, 200, { ok: true });
       } else if (url.pathname === "/api/backups" && req.method === "GET") {
         sendJson(res, 200, { backups: listBackups() });
       } else if (url.pathname === "/api/backup/restore" && req.method === "POST") {

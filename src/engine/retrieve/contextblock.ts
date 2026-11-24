@@ -13,6 +13,8 @@ export interface BuildContextOpts {
   maxChars?: number;
   embedModel?: string;
   queryEmbedding?: number[] | null;
+  /** Filled with the ids of the memories placed in the block (inspector log). */
+  servedIds?: number[];
 }
 
 export function buildContextBlock(o: BuildContextOpts): string {
@@ -27,6 +29,7 @@ export function buildContextBlock(o: BuildContextOpts): string {
   }
   const ctx = projectContext(proj.slug, o.limit ?? 12).filter((h) => h.kind !== "brief");
   if (ctx.length) {
+    o.servedIds?.push(...ctx.map((h) => h.id));
     parts.push(
       "## Key memories\n" + ctx.map((h) => `- [${h.kind}] ${h.content.replace(/\s+/g, " ")}`).join("\n")
     );
@@ -38,6 +41,7 @@ export function buildContextBlock(o: BuildContextOpts): string {
       o.queryEmbedding ?? null
     );
     if (hits.length) {
+      o.servedIds?.push(...hits.map((h) => h.id).filter((id) => !o.servedIds!.includes(id)));
       parts.push(
         `## Matching "${o.query}"\n` +
           hits.map((h) => `- [${h.kind}] ${h.content.replace(/\s+/g, " ")}`).join("\n")
