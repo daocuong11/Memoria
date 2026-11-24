@@ -73,7 +73,8 @@ export function planTriage(opts: { now?: number; ttlDays?: number; projectId?: n
   }
   const drafts = d
     .prepare(
-      `SELECT id, project_id, kind, content, importance, created_at, source_session, source_tool
+      `SELECT id, project_id, kind, content, importance, created_at, source_session, source_tool, access_count,
+              COALESCE(source_event_id, 0) AS source_event_id
        FROM memories WHERE ${where.join(" AND ")} ORDER BY created_at DESC`
     )
     .all(...params) as unknown as DraftRow[];
@@ -94,13 +95,23 @@ export function planTriage(opts: { now?: number; ttlDays?: number; projectId?: n
   const keptByProject = new Map<string, Array<{ item: TriagePlanItem; key: string; sessions: Set<string>; tools: Set<string> }>>();
 
   const userPatterns = userNoisePatterns();
+  // "Not relevant" marks from the retrieval inspector (Q1.5) count against a memory.
+  const marks = new Map<number, number>();
+  try {
+    for (const m of d.prepare("SELECT memory_id AS id, COUNT(*) AS c FROM retrieval_feedback GROUP BY memory_id").all() as Array<{ id: number; c: number }>) marks.set(m.id, m.c);
+  } catch {
+    /* before migration v12 */
+  }
   for (const r of drafts) {
     const base = { id: r.id, projectId: r.project_id, kind: r.kind, content: r.content };
     if (userPatterns.length && matchesUserNoise(r.content, userPatterns)) {
       plan.push({ ...base, action: "archive", reason: "noise:user", score: 0 });
       continue;
     }
-    const t = rescoreStored({ kind: r.kind, content: r.content, importance: r.importance });
+    const t = rescoreStored(
+      { kind: r.kind, content: r.content, importance: r.importance },
+      { irrelevantMarks: marks.get(r.id) || 0, accessCount: (r as any).access_count || 0, fromEvent: ((r as any).source_event_id || 0) > 0 }
+    );
     if (t.decision === "archive") {
       plan.push({ ...base, action: "archive", reason: t.reason, score: t.score });
       continue;
