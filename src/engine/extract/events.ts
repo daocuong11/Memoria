@@ -284,6 +284,18 @@ const COMMIT_KIND: Array<[RegExp, string]> = [
   [/^(?:feat|perf)(?:\([^)]*\))?!?:\s*\S/i, "task_done"],
 ];
 
+const STOP = new Set(["yang", "dengan", "untuk", "dari", "pada", "this", "that", "with", "from", "into", "akan", "perlu", "harus", "todo", "tambahkan", "buat", "bikin", "need", "should", "make", "fix", "feat", "add", "update"]);
+function keywords(s: string): string[] {
+  return [...new Set((s.toLowerCase().match(/[a-z0-9_]{4,}/g) || []).filter((w) => !STOP.has(w)))];
+}
+/** Most of the task's keywords (at least two) appear in the commit subject. */
+export function commitCoversTask(message: string, task: string): boolean {
+  const kws = keywords(task);
+  if (kws.length < 2) return false;
+  const m = message.toLowerCase();
+  return kws.filter((k) => m.includes(k)).length >= Math.max(2, Math.ceil(kws.length * 0.6));
+}
+
 async function upsertCommit(ev: SessionEvent, embed: Embed, out: MaterializeResult): Promise<void> {
   const message = String(ev.payload.message || "").trim();
   const sha = String(ev.payload.sha || "");
@@ -293,6 +305,16 @@ async function upsertCommit(ev: SessionEvent, embed: Embed, out: MaterializeResu
   if (findMemory(ev.projectId, [kind], message)) return;
   await insertEventMemory(ev, { kind, content: message, importance: 0.6, memoryClass: "durable", gitCommit: sha }, embed);
   out.created++;
+  // A fix/feat commit is evidence that the open task it names is done.
+  const open = getDb()
+    .prepare("SELECT id, content, created_at FROM memories WHERE project_id IS ? AND kind = 'task_pending' AND archived = 0 AND COALESCE(resolved_at, 0) = 0 AND created_at <= ?")
+    .all(ev.projectId, ev.ts) as Array<{ id: number; content: string; created_at: number }>;
+  for (const t of open) {
+    if (!commitCoversTask(message, t.content)) continue;
+    updateMemory(t.id, { kind: "task_done" });
+    markResolved(t.id);
+    out.updated++;
+  }
 }
 
 /** Turn new session events into memories. `embed` gives the vector for new

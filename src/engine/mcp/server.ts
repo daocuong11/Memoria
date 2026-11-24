@@ -238,7 +238,7 @@ export function createMcpServer(): Server {
         const full = results
           .map(
             (r) =>
-              `[${r.kind}] (id ${r.id}, ${r.projectSlug ?? "global"}, ${r.sourceTool}, importance ${r.importance.toFixed(2)}${r.superseded ? ", SUPERSEDED by a newer decision" : ""}${r.stale ? ", stale: the files it names are gone" : ""})\n${r.content}`
+              `[${r.kind}] (id ${r.id}, ${r.projectSlug ?? "global"}, ${r.sourceTool}, importance ${r.importance.toFixed(2)}${r.superseded ? ", SUPERSEDED by a newer decision" : ""}${r.stale ? ", stale: the files it names are gone" : ""}${r.fromEvent ? ", from event" : ""})\n${r.content}`
           )
           .join("\n\n");
         if (a.mode === "index") {

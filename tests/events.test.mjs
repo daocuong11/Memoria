@@ -303,3 +303,27 @@ test("claude fixture: verifier fail → edit → pass, commits, still-failing ta
   assert.equal(q("SELECT archived FROM memories WHERE content LIKE '`npm test` still fails%'")[0].archived, 1, "closed by the later pass");
   assert.equal(q("SELECT COUNT(*) AS c FROM memories WHERE kind = 'error_fixed' AND content LIKE '`npm test`%'")[0].c, 1);
 });
+
+test("a feat/fix commit closes the open task it names; recall marks event memories", async () => {
+  const { commitCoversTask } = require("../dist/engine/extract/events.js");
+  assert.equal(commitCoversTask("feat(importer): retry on locked database", "Add a retry to the importer for locked databases"), true);
+  assert.equal(commitCoversTask("fix: typo in README", "Add a retry to the importer for locked databases"), false);
+  const pid = dbmod.ensureProject("ev-commit", "/tmp/ev-commit");
+  const taskId = dbmod.insertMemory({ projectId: pid, kind: "task_pending", content: "Add a retry to the importer for locked databases", importance: 0.6, createdAt: 1000, sourceTool: "claude", status: "active", origin: "heuristic" });
+  dbmod.insertSessionEvent({ tool: "claude", sessionId: "cm", projectId: pid, ts: 5000, type: "commit", sourceRef: "c1:commit", payload: { sha: "abc1234", message: "feat(importer): retry on locked database" } });
+  await materializeEvents(embed);
+  const t = dbmod.getDb().prepare("SELECT kind, resolved_at FROM memories WHERE id = ?").get(taskId);
+  assert.equal(t.kind, "task_done");
+  assert.ok(t.resolved_at > 0);
+
+  const { createMcpServer } = require("../dist/engine/mcp/server.js");
+  const { Client } = require("@modelcontextprotocol/sdk/client/index.js");
+  const { InMemoryTransport } = require("@modelcontextprotocol/sdk/inMemory.js");
+  const server = createMcpServer();
+  const [a, b] = InMemoryTransport.createLinkedPair();
+  const client = new Client({ name: "t", version: "0" });
+  await Promise.all([server.connect(a), client.connect(b)]);
+  const r = await client.callTool({ name: "recall", arguments: { query: "retry importer locked database", project: "/tmp/ev-commit" } });
+  const text = r.content.map((c) => c.text).join("\n");
+  assert.match(text, /from event/);
+});
