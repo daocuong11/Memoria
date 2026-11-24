@@ -76,7 +76,7 @@ seluruh temuan high/medium penting diperbaiki di rilis ini.
 - **`PRIVACY.md`** describes what is read, where it is stored, what is redacted, and every opt-in way data can leave the machine. It ships in the npm package.
 
 ### Capture health
-- **See whether each AI tool's sessions are reaching Memoria.** `memoria status`, `GET /api/capture-health` and a Settings card report every source as ok, behind, error, idle, missing or disabled. "Behind" means the tool kept writing more than a day after the last stored message: the parser stopped matching, or the app was not running. On a copy of a real library this showed Gemini 20 days behind, and Antigravity, VS Code and Copilot holding data with nothing stored, none of which was visible before.
+- **See whether each AI tool's sessions are reaching Memoria.** `memoria status`, `GET /api/capture-health` and a Settings card report every source as ok, behind, error, idle, missing or disabled. "Behind" means the tool kept writing more than a day after the last stored message: the parser stopped matching, or the app was not running. Only files a parser reads count as session activity: config files, IDE state databases and another tool's data in a shared folder (`~/.gemini` also holds Antigravity) do not. A tool with session files but nothing stored is "idle" with a hint to scan. On a copy of a real library: Claude Code, OpenCode, Gemini and Antigravity ok (Antigravity: 17,928 messages on the first scan of that copy), VS Code and Copilot idle (their chat files are empty), Codex, Cursor and Windsurf not installed.
 - **One bad transcript file no longer stops a scan.** The Claude Code parser skips an unreadable file, counts it, and goes on; the count appears in the health report.
 
 ### Leaner context for agents
