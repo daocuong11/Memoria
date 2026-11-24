@@ -70,6 +70,7 @@ directions.
 - **Snapshot before migrations.** When a schema migration is pending, the database is first copied to `backups/memory-pre-v<N>-<time>.db` with `VACUUM INTO`.
 
 ### Fixed (found in the v0.16.3 → v0.17.0 upgrade test)
+- **No crash when Ollama is not installed.** Starting Ollama on a machine without it threw an uncaught `spawn ollama ENOENT` in the Electron main process and showed an error dialog (reported by the AppImage catalog test). Memoria now looks for `ollama` on `PATH` first and handles spawn errors, so it just stays on the offline extractor.
 - **Retrievals tab when empty:** no more row of zeros ("0 logged calls · 0 with no result · …") and no filter or clear button with nothing to filter. The tab now says what it is for, offers "Connect an AI tool", and says so when logging is paused.
 - **Settings no longer breaks on open.** A refactor on 5 Nov removed `loadBackups()`, so opening Settings threw, and the backup list, sync status, device list and capture health never loaded.
 - **No resume block in the home folder.** A session started in `~` made the home folder a "project", and resume blocks were written to `~/AGENTS.md`, `~/CLAUDE.md` and `~/GEMINI.md`. The home folder and filesystem roots are now never injected. `MEMORIA_NO_INJECT=1` turns injection off entirely, for tests and audits on a copy of a real database.
