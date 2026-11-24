@@ -5,11 +5,17 @@
 
 ---
 
-## ⏭ POSISI TERKINI (2026-11-24) — fase kualitas v0.18
+## ⏭ POSISI TERKINI (2026-11-24) — fase kualitas v0.17.0
 
-**Rilis terbaru: v0.16.3.** Di `main` sudah siap untuk v0.17.0: jurnal belajar,
+**Rilis terbaru: v0.16.3.** Di `main` sudah ada (belum dirilis): jurnal belajar,
 tombol Sync (devices/rotate/revoke), file noise per bahasa, cakupan repo git,
 dedup hook CLAUDE.md, aturan Tier 0 yang diukur di data nyata.
+
+**Keputusan rilis (2026-11-24): satu rilis di akhir.** Tidak ada rilis di
+tengah fase. Semua isi `main` di atas + hasil fase kualitas keluar bersama
+sebagai **v0.17.0** (langkah 25). Langkah 3 (klaim README/landing) dan 4
+(rilis v0.17.0) digabung ke langkah 25; README dan landing tidak disentuh
+sampai saat itu.
 
 **Arah baru (2026-11-24):** fitur dibekukan; 3–4 minggu fokus ke **kualitas
 inti**. Dasarnya analisis di data nyata (read-only, label privat di
@@ -34,7 +40,7 @@ memakai pipe sehingga exit code tertutup.
 5. **Kompatibilitas sync:** pakai jenis memori yang ada, metadata baru = kolom
    opsional, event mentah tidak pernah di-sync, ada test bundle versi baru bisa
    diterapkan versi lama.
-6. Promosi menunggu v0.18.0.
+6. Promosi menunggu v0.17.0.
 7. Perkiraan 3–4 minggu, batas keras 4 minggu. Gerbang gagal → Memoria
    diposisikan sebagai **alat serah terima kerja lintas tool**, README ikut.
 8. PR kontributor (#81/#82) di-merge duluan; kerja kita yang menyesuaikan.
@@ -52,9 +58,9 @@ memakai pipe sehingga exit code tertutup.
 8. Q-eval4 Protokol uji serah terima 10 menit (Claude Code → opencode). — S tulis, **A jalankan**
 
 **Minggu 1 — capture yang benar**
-9. Q1 Perbaiki peran data lama (≥1.743 baris tool tercatat `user`), snapshot dulu, triage ulang. Target noise terbuang +5 poin.
+9. Q1 Perbaiki peran data lama (≥1.743 baris tool tercatat `user`), snapshot dulu, triage ulang. Target noise terbuang +5 poin. — **Hasil di Q1 di bawah.**
 10. Q1.5 Retrieval inspector: log lokal (≤500 entri, diredaksi, tidak di-sync) + tab dashboard + "tandai tidak relevan".
-11. Q2-schema Migrasi v11: tabel lokal `session_events` (tidak di-sync); kolom opsional di `memories`: `source_event_id`, `git_branch`, **`git_commit`**, `memory_class` (`working`/`durable`), `expires_at`; test kompatibilitas bundle.
+11. Q2-schema Migrasi v12: tabel lokal `session_events` (tidak di-sync); kolom opsional di `memories`: `source_event_id`, `git_branch`, **`git_commit`**, `memory_class` (`working`/`durable`), `expires_at`; test kompatibilitas bundle.
 12. Q2a Todo (`TodoWrite`/`Task*`/`update_plan`, opencode `todowrite`/`todo`) dengan status asli; jawaban pertanyaan bersubstansi → `decision`, persetujuan sesaat → working; judul `ai-title`/`session.title`, recap `wrap_up`. Target todo tertangkap ≥90%.
 13. Q2b Error→fix: allowlist verifier, gagal dari **isi output** (+exit code), normalisasi perintah, wajib baris error + file kode; verifier gagal di akhir sesi → task "belum beres"; file dari Edit/Write; commit `fix:`/`feat:`; branch + commit; redaksi stdout/stderr. Target ketepatan ≥90% (semua pasangan lolos filter ±46 + 20 yang ditolak).
 14. Q-backfill Proses ulang 28 sesi Claude + 52 sesi opencode, idempoten.
@@ -72,14 +78,14 @@ memakai pipe sehingga exit code tertutup.
 22. Q9a Embedding semantik: `nomic-embed-text` (Ollama) vs `multilingual-e5-small` in-process vs `all-MiniLM-L6-v2`. Target hit@5 (a) ≥70%, (b) ≥80%. — **A pilih model**
 23. Q9b LLM opsional: nilai draft ragu, padatkan laporan giliran, konsolidasi keputusan; fallback Tier 0. Target ketepatan ≥85%.
 24. Q9.5 `memoria doctor`, snapshot sebelum migrasi, checksum SHA256 di release, `PRIVACY.md`.
-25. Q10 Rilis v0.18.0 "Quality": README dengan angka gerbang + positioning (claude-mem, OpenMemory/mem0, Basic Memory, memori bawaan Claude Code) + siapa yang cocok/tidak. — **A: "boleh rilis"**
+25. Q10 Rilis v0.17.0 "Quality": README dengan angka gerbang + positioning (claude-mem, OpenMemory/mem0, Basic Memory, memori bawaan Claude Code) + siapa yang cocok/tidak. — **A: "boleh rilis"**
 
-**Sesudah v0.18:** usulan ADR (`docs/adr/`), export JSONL lewat CLI, filter &
+**Sesudah v0.17.0:** usulan ADR (`docs/adr/`), export JSONL lewat CLI, filter &
 file konflik Obsidian, refactor, parser Codex/Gemini, i18n/Contributors/
 Homebrew/winget/code signing. **Tidak diambil:** grup proyek lintas repo, MCP
 Resources, parameter `feedback` di tool MCP, compaction tanpa LLM.
 
-### C. Target gerbang v0.18
+### C. Target gerbang v0.17.0
 | Metrik | Sekarang | Target |
 |---|---|---|
 | Ketepatan memori aktif | 38% (24–53%), held-out v2 | ≥70% Tier 0, ≥85% + LLM |
@@ -113,6 +119,37 @@ classifier jalan (55 memori asli). Tidak dipakai untuk menyetel aturan.
 - Baris konfigurasi/endpoint (`*_RPC_URL=…`, `**Endpoint:**`) dibuang `too-few-words` (5).
 - Baris tabel bermakna dibuang `table-row` (2).
 - Regresi aturan baru: frasa `berarti` (`user-request`) dan `dangling-colon` (2) → diperbaiki di Q1/Q3.
+
+### C3. Hasil Q1 — peran data lama (migrasi v11)
+Migrasi v11 `legacy-claude-roles` menilai ulang baris Claude `user` dari sesi
+yang ditulis parser lama (sesi tanpa satu pun baris `tool`); sesi parser baru
+dan tool lain tidak disentuh. Sebelum migrasi apa pun, DB disalin ke
+`backups/memory-pre-v<N>-<waktu>.db` (sebagian langkah 24).
+
+Diuji di salinan DB nyata, kebenaran dari 8.068 baris yang jsonl aslinya masih ada:
+
+| Metrik | Sebelum | Sesudah |
+|---|---|---|
+| Baris Claude `user` (10.318) | 10.318 | 1.814 user · 7.765 tool · 739 system |
+| Output tool yang keluar dari `user` | 0% | 96,9% (6.178/6.374) |
+| Pesan manusia yang tetap `user` (di luar penanda gambar/IDE/interupsi) | 100% | 96,9% (1.080/1.115) |
+| Ketepatan label `user` | 21% (1.694/8.068) | 85% (1.080/1.276) |
+| "Permintaan user terakhir" per sesi benar (snapshot/resume) | 5/15 | 13/14 |
+| Task ditandai selesai hanya karena output tool | 8 dari 78 | 0 |
+| Waktu migrasi (DB 39 MB, termasuk snapshot) | — | 2,5 dtk |
+
+**Target noise terbuang +5 poin belum tercapai.** Eval held-out menilai isi
+memori saja, jadi angkanya tetap (v2: 38% / 80% / 75%). Dicoba: arsipkan
+memori yang isinya hanya muncul di baris tool (2.577 memori belum diarsip; di
+held-out v2 259 dari 271 = 95,6% noise). Hasil di v2: noise terbuang +3,2 poin tetapi
+memori asli tersimpan −1,8 (arsip semua: +4,5 / −9,0) — memori bagus ikut
+hilang (pesan commit, baris env, kalimat dokumen yang dibaca tool). **Tidak
+diambil.** Asal "tool" masuk sebagai fitur di skor bukti (Q4); pengurangan
+noise dari peran yang benar baru terlihat saat ekstraksi ulang (Q3/backfill).
+
+Regresi `berarti`/`dangling-colon` tidak diubah: di data penyetelan
+(446 label) semua kasusnya noise, jadi mengubahnya hanya demi v2 = menyetel di
+data uji. Dibahas lagi di Q3 dengan sampel baru.
 
 ### D. Audit eksternal 24 poin (sudah dicek ke kode)
 Sudah ada: WAL+busy_timeout, supersede, dedupe saat tulis, redaksi secret,

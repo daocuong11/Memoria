@@ -18,7 +18,7 @@ export interface HandoffOptions {
   topKinds?: string[];
 }
 
-/* ---------- Resume Engine: "SESSION CONTINUATION" block ----------
+/* ---------- Resume Engine: "SESSION RESUME" block ----------
  * Covers the limit-hopping scenario: the user switches tools mid-task,
  * and the new tool must immediately know what is being worked on.
  * All material is collected WITHOUT an LLM (cheap & fast):

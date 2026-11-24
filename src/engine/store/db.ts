@@ -5,6 +5,7 @@ import * as path from "node:path";
 import { extractEntities } from "../extract/entities";
 import { canonicalPath, projectSlugFromCwd, stripInjectedTags } from "../ingest/util";
 import { redactSecrets } from "../privacy/redact";
+import { classifyLegacyClaudeRole } from "../ingest/legacy-roles";
 
 export interface Transcript {
   id?: number;
@@ -158,7 +159,7 @@ export function initDb(dataDir: string): DatabaseSync {
     CREATE INDEX IF NOT EXISTS idx_tags_memory ON memory_tags(memory_id);
   `);
   migrate(db);
-  runMigrations(db);
+  runMigrations(db, dataDir);
   return db;
 }
 
@@ -209,7 +210,34 @@ const MIGRATIONS: Migration[] = [
   { version: 8, name: "redact-secrets-triage-log", up: m8RedactAndTriage },
   { version: 9, name: "recover-seq-collision-loss", up: m9RecoverSeqLoss },
   { version: 10, name: "superseded-decisions", up: m10SupersededBy },
+  { version: 11, name: "legacy-claude-roles", up: m11LegacyClaudeRoles },
 ];
+
+/** M11: Claude Code sessions stored by the old parser have every tool result
+ * under role `user` (see ingest/legacy-roles.ts). Only sessions without a
+ * single `tool` row are touched: a session the current parser wrote already
+ * has correct roles. Returns the number of rows changed. */
+export function m11LegacyClaudeRoles(d: DatabaseSync): number {
+  const sessions = d
+    .prepare(
+      `SELECT DISTINCT session_id FROM transcripts t
+       WHERE tool = 'claude' AND role = 'user'
+         AND NOT EXISTS (SELECT 1 FROM transcripts x WHERE x.tool = 'claude' AND x.session_id = t.session_id AND x.role = 'tool')`
+    )
+    .all() as Array<{ session_id: string }>;
+  const rowsOf = d.prepare("SELECT id, content FROM transcripts WHERE tool = 'claude' AND session_id = ? AND role = 'user'");
+  const setRole = d.prepare("UPDATE transcripts SET role = ? WHERE id = ?");
+  let changed = 0;
+  for (const s of sessions) {
+    for (const r of rowsOf.all(s.session_id) as Array<{ id: number; content: string }>) {
+      const role = classifyLegacyClaudeRole(r.content);
+      if (role === "user") continue;
+      setRole.run(role, r.id);
+      changed++;
+    }
+  }
+  return changed;
+}
 
 /** M10: a newer decision about the same subject closes the old one's
  * validity window (valid_to) and records itself in superseded_by. Kept on
@@ -379,9 +407,27 @@ export function continuityStats(): ContinuityStats {
   };
 }
 
-function runMigrations(d: DatabaseSync): void {
+/** Consistent copy of the database before a schema migration runs, in
+ * `<dataDir>/backups/memory-pre-v<from>-<stamp>.db`. Migrations rewrite data
+ * in place; this is the way back. Failure to snapshot does not block the app. */
+function snapshotBeforeMigration(d: DatabaseSync, dataDir: string, fromVersion: number): void {
+  try {
+    const dir = path.join(dataDir, "backups");
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+    const stamp = new Date().toISOString().replace(/[:T]/g, "-").slice(0, 19);
+    const dest = path.join(dir, `memory-pre-v${fromVersion}-${stamp}.db`);
+    d.prepare("VACUUM INTO ?").run(dest);
+    if (process.platform !== "win32") fs.chmodSync(dest, 0o600);
+  } catch {
+    /* best effort */
+  }
+}
+
+function runMigrations(d: DatabaseSync, dataDir?: string): void {
   const row = d.prepare("PRAGMA user_version").get() as { user_version: number | null };
   let v = Number(row.user_version) || 0;
+  const pending = MIGRATIONS.filter((m) => m.version > v);
+  if (v > 0 && pending.length && dataDir) snapshotBeforeMigration(d, dataDir, v);
   for (const m of MIGRATIONS) {
     if (m.version <= v) continue;
     d.exec("BEGIN");

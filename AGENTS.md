@@ -72,13 +72,13 @@ ulang konteks.
   nomor versi Glama bisa mendahului npm (ada 0.16.4 di Glama) — rilis berikutnya 0.17.0.
 
 ## Next
-**Fase kualitas v0.18 (fitur dibekukan).** Rencana lengkap 25 langkah, aturan
+**Fase kualitas v0.17.0 (fitur dibekukan).** Rencana lengkap 25 langkah, aturan
 main, dan gerbang angka: `ROADMAP.md` → POSISI TERKINI. Ringkas:
 - Setiap PR kualitas wajib angka sebelum/sesudah (eval privat `.eval-private/`).
 - Fokus Claude Code + opencode; capture event terstruktur (todo, pertanyaan,
   error→fix dari **isi output**, file, commit) sebelum menyentuh heuristik kalimat.
 - Kolom baru di `memories` selalu opsional; event mentah tidak pernah di-sync.
-- Refactor `db.ts`/`http.ts`/`app.js` dan fitur baru dibekukan sampai v0.18.
+- Refactor `db.ts`/`http.ts`/`app.js` dan fitur baru dibekukan sampai v0.17.0.
 
 <!-- memoria:start -->
 _(Blok resume otomatis Memoria akan muncul di sini.)_

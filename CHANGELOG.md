@@ -50,6 +50,10 @@ seluruh temuan high/medium penting diperbaiki di rilis ini.
 
 ## [Unreleased]
 
+### Transcript roles repaired (migration v11)
+- **Old Claude Code tool output no longer counts as something you said.** Before v0.12 every tool result (file reads, shell output, edit receipts) was stored with role `user`. Migration v11 re-labels those rows as `tool` or `system` from their text, in Claude sessions written by the old parser only. Checked against 8,068 rows whose original jsonl still exists: 96.9% of tool output leaves `user`, 96.9% of typed messages stay `user`, and rows labelled `user` went from 21% to 85% correct. The session's "last user request" in snapshots was right in 5 of 15 labelled sessions before and 13 of 14 after; 8 of 78 automatic task closures came only from tool output and no longer happen.
+- **Snapshot before migrations.** When a schema migration is pending, the database is first copied to `backups/memory-pre-v<N>-<time>.db` with `VACUUM INTO`.
+
 ### Tier 0 measured on real data
 - **The synthetic eval was optimistic.** On a hand-labelled sample of 296 heuristic memories from a real library (mostly Indonesian, casual agent chat), current triage reached 40% active precision and removed 57% of noise; the synthetic set reports 100% / 100%. Rules were tuned on that sample and checked on a separate held-out sample of 150, labelled before the classifier ran.
 - **Held-out result:** active precision 31% → 41%, noise removed 59% → 70%, memories kept 91% → 91%. Changes: more Indonesian agent-chatter phrases and a new `user-request` rule (raw user requests such as "tambahin … dong") in `noise-lang/id.json`; known harness lines in `en.json`; structural rules for answered-question echoes, tool receipts, `throw new …` and template-literal lines, object-property / f-string lines, and lead-ins that end in a colon. Listing line numbers (`12 - …`, `5: …`) are stripped and the rest judged on its own, so a documented decision in a file listing is no longer dropped.
