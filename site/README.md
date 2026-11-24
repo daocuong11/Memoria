@@ -115,3 +115,8 @@ node scripts/site-assets.mjs site/public   # or: site
 ```
 
 Pull requests run the normal CI; the page deploys after merge.
+
+## Release history
+The `changelog/` page is generated at deploy time from the root `CHANGELOG.md` by
+`scripts/site-changelog.mjs` (styles in `style.css`, "Changelog page"). Do not commit a
+built `changelog/` folder; edit `CHANGELOG.md` instead.
