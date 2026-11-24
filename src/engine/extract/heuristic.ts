@@ -289,19 +289,21 @@ export function rescoreStored(m: { kind: string; content: string; importance: nu
 
 /* ---------------- Turn-aware extraction (quality phase Q3) ----------------
  * A turn is one user message plus everything the agent does until the next
- * user message. Measured on the owner's labels, 56% of real memories sit in
- * the agent's LAST message of a turn (its report), 13% in mid-turn messages
- * and those mid-turn messages are mostly narration ("Sekarang saya cek …").
- * So:
- * - mid-turn agent messages are skipped;
- * - the final agent message gives one `working` turn report plus at most
- *   MAX_PER_TURN durable candidates (strongest first);
- * - user messages give candidates too (preferences, decisions);
- * - a session-continuation summary (role system) is read like a report;
- * - tool output is never a source. */
+ * user message. Where the owner's labelled memories came from (946 labels):
+ * the agent's final message of a turn 32% worth keeping, a continuation
+ * summary 27%, a mid-turn agent message 15%, tool output 6%, user messages
+ * 3%. So:
+ * - mid-turn agent messages and tool output are skipped;
+ * - the final agent message gives one `working` turn report plus up to
+ *   MAX_PER_TURN candidates;
+ * - from user messages only stated rules (preferences), checklists and lines
+ *   that label themselves ("TODO: …", "Keputusan: …") are taken;
+ * - a session-continuation summary (role system) is read like a report. */
 
-const MAX_PER_TURN = Number(process.env.Q3_MAX || 3);
-const REPORT_MAX = Number(process.env.Q3_REPORT || 600);
+const MAX_PER_TURN = 20;
+const REPORT_MAX = 600;
+/** A user line that labels itself: "TODO: …", "Keputusan: …". */
+const USER_MARKED = /^\s*(?:todo|to-do|fixme|keputusan|decision|catatan|note)\s*:/i;
 const CONTINUATION = /^This session is being continued from a previous conversation/;
 
 /** The agent's final message, condensed: code blocks and tables dropped,
@@ -333,9 +335,6 @@ function candidatesFrom(text: string, fromUser: boolean): HeuristicMemory[] {
   for (const sentence of splitSentences(text)) {
     const hit = classifySentence(sentence);
     if (!hit) continue;
-    // A fact needs a person's words: agent prose with a path or a version in
-    // it is mostly narration.
-    if (hit.kind === "fact" && !fromUser) continue;
     out.push({ kind: hit.kind, content: sentence, importance: Math.min(0.85, hit.importance + bias), confidence: Math.min(0.98, hit.confidence + bias), signal: tag(hit.signals) });
   }
   for (const m of extractCodeSignals(text))
@@ -359,9 +358,12 @@ export function heuristicExtract(conversation: Array<{ role: string; content: st
     return { ...m, content };
   };
   const keep = (list: HeuristicMemory[], limit: number): void => {
-    const ok = list.map(accept).filter((m): m is HeuristicMemory => !!m);
-    ok.sort((a, b) => triageCandidate(b).score - triageCandidate(a).score || scoreForRank(b) - scoreForRank(a));
-    for (const m of ok.slice(0, limit)) {
+    const ok = list
+      .map(accept)
+      .filter((m): m is HeuristicMemory => !!m)
+      .map((m) => ({ m, s: triageCandidate(m).score, r: scoreForRank(m) }));
+    ok.sort((a, b) => b.s - a.s || b.r - a.r);
+    for (const { m } of ok.slice(0, limit)) {
       seen.add(dedupeKey(m.content));
       collected.push(m);
     }
@@ -382,20 +384,24 @@ export function heuristicExtract(conversation: Array<{ role: string; content: st
     const text = msg.content || "";
     if (!text.trim() || msg.role === "tool") return;
     if (msg.role === "user") {
-      keep(candidatesFrom(text, true), MAX_PER_TURN);
+      // On the owner's labels only 3% of candidates from user messages were
+      // worth keeping; a stated rule ("jangan …", "always …") is the exception.
+      const userCands = candidatesFrom(text, true);
+      keep(userCands.filter((m) => m.kind === "preference" || USER_MARKED.test(m.content) || (m.signal || []).some((x) => x.startsWith("checkbox_"))), MAX_PER_TURN);
       return;
     }
     const continuation = msg.role === "system" && CONTINUATION.test(text);
     if (msg.role === "system" && !continuation) return;
     if (msg.role === "assistant" && !finals.has(i)) {
-      // Mid-turn messages are mostly narration; only an explicit decision or
-      // a stated error fix survives (still capped per turn).
-      if (process.env.Q3_MID === "1") keep(candidatesFrom(text, false).filter((m) => (m.kind === "decision" && EXPLICIT_DECISION.test(m.content)) || m.kind === "error_fixed"), 1);
-      return;
+      return; // mid-turn narration
     }
+    const before = collected.length;
+    keep(candidatesFrom(text, false), continuation ? 12 : MAX_PER_TURN);
     if (!continuation) {
       const report = turnReport(text);
-      if (report.length >= 40 && !noiseReason(report) && !GENERIC_RE.test(report)) {
+      // A one-line message is already its own candidate; no report then.
+      const same = collected.slice(before).some((m) => dedupeKey(m.content) === dedupeKey(report));
+      if (!same && report.length >= 40 && !noiseReason(report) && !GENERIC_RE.test(report)) {
         const key = "report:" + dedupeKey(report);
         if (!seen.has(key)) {
           seen.add(key);
@@ -403,7 +409,6 @@ export function heuristicExtract(conversation: Array<{ role: string; content: st
         }
       }
     }
-    keep(candidatesFrom(text, false), continuation ? 12 : MAX_PER_TURN);
   });
   return collected;
 }

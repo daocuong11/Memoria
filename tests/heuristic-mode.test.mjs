@@ -32,6 +32,7 @@ test("heuristicExtract: tangkap todo/keputusan/error-fix + sinyal path/cmd", () 
   const mems = heuristicExtract([
     { role: "user", content: "TODO: fix login bug in src/auth/login.ts" },
     { role: "assistant", content: "Keputusan: kita pakai JWT daripada session cookie." },
+    { role: "user", content: "oke lanjut" },
     { role: "assistant", content: "Error ENOENT saat run `npm run build`, fixed dengan membuat folder dist/." },
     { role: "user", content: "- [ ] tambah tes untuk parser\n- [x] update README" },
   ]);
@@ -108,4 +109,29 @@ test("task lifecycle: task_pending heuristik ditutup saat ada sinyal selesai", (
   runTaskLifecycle(pid4);
   const m = dbmod.memoryById(inserted.id);
   assert.ok(m && (m.kind === "task_done" || (m.resolvedAt && m.resolvedAt > 0)), "task heuristik harus ditandai selesai");
+});
+
+test("heuristicExtract (Q3): mid-turn narration skipped, one working report per turn, user chatter ignored", () => {
+  const mems = heuristicExtract([
+    { role: "user", content: "tolong cek kenapa build gagal ya, nanti kabarin" },
+    { role: "assistant", content: "Sekarang saya cek dulu log build-nya, nanti saya pakai npm run build untuk reproduksi." },
+    { role: "tool", content: "error TS2304: Cannot find name 'foo'." },
+    { role: "assistant", content: "Build gagal karena `foo` belum diimpor di src/a.ts. Keputusan: kita pakai named export daripada default export supaya impor konsisten. Sudah diperbaiki dan build lulus lagi." },
+    { role: "user", content: "jangan pakai default export lagi di repo ini" },
+  ]);
+  assert.ok(!mems.some((m) => m.content.startsWith("Sekarang saya cek")), "mid-turn narration is not a source");
+  assert.ok(!mems.some((m) => m.content.includes("kenapa build gagal")), "a plain request is not a memory");
+  const reports = mems.filter((m) => m.memoryClass === "working");
+  assert.equal(reports.length, 1);
+  assert.match(reports[0].content, /^Build gagal karena/);
+  assert.ok(mems.some((m) => m.kind === "decision" && /named export/.test(m.content)));
+  assert.ok(mems.some((m) => m.kind === "preference" && /default export/.test(m.content)), "a stated rule from the user is kept");
+});
+
+test("turnReport: code and tables dropped, markdown stripped, cut at a sentence", async () => {
+  const { turnReport } = await import("../dist/engine/extract/heuristic.js");
+  const r = turnReport("## Done\n**Fixed** the build.\n```ts\nconst x = 1;\n```\n| a | b |\n|---|---|\nNext: " + "word ".repeat(200) + ". Tail.");
+  assert.ok(r.startsWith("Done Fixed the build. Next:"));
+  assert.ok(!r.includes("const x") && !r.includes("| a |"));
+  assert.ok(r.length <= 601);
 });

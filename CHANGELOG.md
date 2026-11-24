@@ -54,6 +54,12 @@ seluruh temuan high/medium penting diperbaiki di rilis ini.
 - **Old Claude Code tool output no longer counts as something you said.** Before v0.12 every tool result (file reads, shell output, edit receipts) was stored with role `user`. Migration v11 re-labels those rows as `tool` or `system` from their text, in Claude sessions written by the old parser only. Checked against 8,068 rows whose original jsonl still exists: 96.9% of tool output leaves `user`, 96.9% of typed messages stay `user`, and rows labelled `user` went from 21% to 85% correct. The session's "last user request" in snapshots was right in 5 of 15 labelled sessions before and 13 of 14 after; 8 of 78 automatic task closures came only from tool output and no longer happen.
 - **Snapshot before migrations.** When a schema migration is pending, the database is first copied to `backups/memory-pre-v<N>-<time>.db` with `VACUUM INTO`.
 
+### Tier 0 reads sessions turn by turn
+- **One turn report instead of sentence fragments.** A turn is a user message plus everything the agent does until the next one. The agent's final message of a turn becomes one short-lived `working` memory (kind `context`, code and tables removed, about 600 characters, served for three days), plus up to 20 candidates from its sentences and lists.
+- **Mid-turn narration and tool output are skipped.** From user messages, only stated rules ("jangan …", "always …"), checklists and lines that label themselves ("TODO: …", "Keputusan: …") are taken. Session-continuation summaries are read like a report.
+- Measured by re-extracting 90 real sessions and matching against the owner's labels: on the held-out sample, memories kept 30.9% → 34.5% and noise removed 91.2% → 94.8%; on the older held-out sample 26.1% → 26.1% and 92.9% → 96.1%.
+- Where the 946 labels came from: the agent's final message 32% worth keeping, continuation summaries 27%, mid-turn messages 15%, tool output 6%, user messages 3%. Sentence-level quality beyond this needs an LLM provider.
+
 ### Backfill for older sessions
 - **`memoria maintain backfill-events`** re-reads Claude Code and OpenCode sessions stored before session events existed, then builds the todo, decision, error→fix and commit memories from them. It writes a backup first, skips transcripts that are already stored, and adds nothing on a second run. Older heuristic task memories that duplicate a captured todo are archived as one triage batch (`maintain triage --undo` reverts it). It runs only the two parsers, not a full scan, so it never writes resume blocks into project files.
 

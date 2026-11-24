@@ -55,6 +55,9 @@ export function isGenericMemory(content: string): boolean {
   return false;
 }
 
+/** Turn reports are served for three days, then the lifecycle step retires them. */
+const REPORT_TTL_MS = 3 * 86_400_000;
+
 export async function extractQueue(force = false, opts: { order?: "asc" | "desc" } = {}): Promise<number> {
   if (running) return 0;
   if (!force && Date.now() - lastAttempt < 30_000) return 0;
@@ -104,8 +107,10 @@ export async function extractQueue(force = false, opts: { order?: "asc" | "desc"
       // oleh triage), dengan batas atas agar satu sesi tidak membanjiri.
       const MAX_AUTO_PROMOTE = Math.min(40, 10 + Math.ceil(sorter.length / 6));
 
+      // Tier 0 reads a session turn by turn, so it gets the whole pending part
+      // at once; an LLM gets windows that fit its context.
       const windows: typeof pending[] = [];
-      const CHUNK = 24;
+      const CHUNK = heuristic ? sorter.length || 1 : 24;
       for (let i = 0; i < sorter.length; i += CHUNK) {
         windows.push(sorter.slice(i, i + CHUNK));
       }
@@ -114,7 +119,7 @@ export async function extractQueue(force = false, opts: { order?: "asc" | "desc"
         // Heuristik butuh peran "tool" untuk melewati output mesin; LLM
         // menerima format lama (user/assistant) agar perilakunya tidak berubah.
         const conversation = winRows.map((r) => ({
-          role: r.role === "user" ? "user" : heuristic && r.role === "tool" ? "tool" : "assistant",
+          role: r.role === "user" ? "user" : heuristic && (r.role === "tool" || r.role === "system") ? r.role : "assistant",
           content: r.content,
         }));
         const memories = await extractProv.extract(projectSlugById(projectId) || "unknown", conversation);
@@ -126,6 +131,19 @@ export async function extractQueue(force = false, opts: { order?: "asc" | "desc"
         kept.forEach((mem, i) => {
           let status = defaultStatus;
           let importance = mem.importance;
+          const report = heuristic && (mem as any).memoryClass === "working";
+          if (report) {
+            // Turn report: short-lived resume context, not a lasting fact.
+            addMemoryWithDedupe({
+              projectId: projectId || null, kind: "context", content: mem.content, importance: mem.importance,
+              createdAt: winRows[winRows.length - 1]?.ts || Date.now(), lastAccessed: 0, accessCount: 0, sourceTool: tool,
+              embedding: embs[i], status: "active", origin, embedModel: embs[i] ? embedProv.embedModel : "",
+              sourceSession: rows[0].sessionId || "", memoryClass: "working",
+              expiresAt: (winRows[winRows.length - 1]?.ts || Date.now()) + REPORT_TTL_MS,
+            });
+            extracted++;
+            return;
+          }
           if (heuristic) {
             // "Always archive drafts like this" patterns from the inbox.
             if (userPatterns.length && matchesUserNoise(mem.content, userPatterns)) return;
