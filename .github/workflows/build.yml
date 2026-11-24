@@ -193,6 +193,14 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+      - name: SHA256 checksums
+        # Verify a download with: shasum -a 256 -c SHA256SUMS.txt (macOS/Linux)
+        # or: Get-FileHash <file> -Algorithm SHA256 (Windows).
+        run: |
+          cd dist
+          find . -maxdepth 1 -type f ! -name SHA256SUMS.txt -printf '%f\n' | sort | xargs sha256sum > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          printf '\n### Checksums\n\nSHA256 of every file is in `SHA256SUMS.txt`. Verify with `shasum -a 256 -c SHA256SUMS.txt`.\n' >> ../release-body.md
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
