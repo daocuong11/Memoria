@@ -41,7 +41,7 @@ test("every language file is valid and registered", () => {
   }
 });
 
-test("matching: whole words, apostrophes and commas ignored, both languages", () => {
+test("matching: whole words, apostrophes and commas ignored, all languages", () => {
   const cases = {
     "Let me check the config file first.": "agent-narration",
     "Let’s run the tests again now please.": "agent-narration",
@@ -55,6 +55,11 @@ test("matching: whole words, apostrophes and commas ignored, both languages", ()
     "Sementara itu, kosongkan dulu kolomnya lalu coba lagi.": "agent-narration",
     "Tolong tambahkan tombol share di halaman hasil.": "user-request",
     "Use offset and limit parameters to read specific portions of the file.": "generic-agent",
+    "Để tôi kiểm tra file cấu hình trước đã.": "agent-narration",
+    "Để mình xem lại đoạn code này nhé.": "agent-narration",
+    "Bạn có muốn tôi thêm test cho parser không?": "offer-question",
+    "Đã sửa xong, hy vọng giúp ích cho bạn.": "generic-agent",
+    "Giúp tôi thêm nút chia sẻ vào trang kết quả.": "user-request",
   };
   for (const [text, id] of Object.entries(cases)) assert.equal(noiseReason(text), id, text);
   const keep = [
@@ -64,6 +69,8 @@ test("matching: whole words, apostrophes and commas ignored, both languages", ()
     "Checkout uses Stripe; refunds go through the admin panel.",
     "Lanjutan dari keputusan kemarin: indexer pakai Postgres, bukan polling.",
     "12 - AI layer pakai OpenRouter untuk respons chat di tahap MVP.",
+    "Để đo hiệu năng, chạy benchmark trước khi merge.",
+    "Tôi sẽ họp với team lúc 10 giờ sáng mai.",
   ];
   for (const text of keep) assert.equal(noiseReason(text), null, text);
 });
