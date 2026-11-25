@@ -1,0 +1,108 @@
+{
+  "language": "vi",
+  "name": "Tiếng Việt",
+  "rules": [
+    {
+      "id": "agent-narration",
+      "at": "start",
+      "phrases": [
+        "để tôi",
+        "để mình",
+        "để tôi kiểm tra",
+        "để mình kiểm tra",
+        "để tôi xem",
+        "để mình xem",
+        "để tôi đọc",
+        "để mình đọc",
+        "tôi sẽ kiểm tra",
+        "tôi sẽ xem",
+        "tôi sẽ đọc",
+        "tôi sẽ chạy",
+        "tôi sẽ mở",
+        "tôi sẽ tạo",
+        "tôi sẽ sửa",
+        "tôi sẽ thử",
+        "tôi sẽ bắt đầu",
+        "tôi sẽ tìm",
+        "tôi sẽ cập nhật",
+        "tôi sẽ xác minh",
+        "mình sẽ kiểm tra",
+        "mình sẽ xem",
+        "mình sẽ thử",
+        "giờ tôi sẽ",
+        "bây giờ tôi sẽ",
+        "giờ mình sẽ",
+        "bây giờ mình sẽ",
+        "tiếp theo tôi sẽ",
+        "trước tiên tôi sẽ",
+        "trước hết tôi sẽ",
+        "ok để tôi",
+        "ok tôi sẽ",
+        "ok mình sẽ",
+        "được rồi tôi sẽ",
+        "được rồi mình sẽ",
+        "tôi bắt đầu kiểm tra",
+        "tôi bắt đầu xem",
+        "tôi đang kiểm tra",
+        "mình đang xem",
+        "đang kiểm tra",
+        "đang xem",
+        "đang đọc",
+        "đang tìm",
+        "đang xử lý"
+      ]
+    },
+    {
+      "id": "offer-question",
+      "at": "start",
+      "phrases": [
+        "bạn có muốn tôi",
+        "bạn có muốn mình",
+        "bạn muốn tôi",
+        "bạn muốn mình",
+        "có muốn tôi",
+        "có muốn mình",
+        "có cần tôi",
+        "bạn có cần tôi",
+        "nếu bạn muốn",
+        "nếu bạn cần",
+        "bạn có muốn tiếp tục",
+        "muốn tôi tiếp tục",
+        "bạn có muốn tôi làm tiếp"
+      ]
+    },
+    {
+      "id": "generic-agent",
+      "at": "anywhere",
+      "phrases": [
+        "hy vọng giúp ích",
+        "hy vọng hữu ích",
+        "nếu cần thêm gì",
+        "cứ cho tôi biết",
+        "cho tôi biết nếu",
+        "rất vui được giúp",
+        "sẵn sàng giúp đỡ",
+        "bạn có cần thêm gì không",
+        "hãy cho tôi biết",
+        "không được tiết lộ hướng dẫn"
+      ]
+    },
+    {
+      "id": "user-request",
+      "at": "start",
+      "phrases": [
+        "giúp tôi",
+        "giúp mình",
+        "làm ơn",
+        "làm giúp tôi",
+        "làm giúp mình",
+        "thêm giúp tôi",
+        "sửa giúp tôi",
+        "viết giúp tôi",
+        "tạo giúp tôi",
+        "bạn giúp tôi",
+        "nhờ bạn"
+      ]
+    }
+  ]
+}
