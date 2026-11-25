@@ -16,7 +16,10 @@ ulang konteks.
 - `CHANGELOG.md` — riwayat rilis (English).
 - `ROADMAP.md` — bagian **"POSISI TERKINI"** = status + backlog berurutan.
 - `git log` — conventional commits; fitur via branch `feat/...`/`fix/...`/`chore/...`
-  → PR ke `main` → tunggu check `verify` → merge commit (`--merge`, bukan squash).
+  → PR ke `main` → tunggu check `verify` → merge commit (`--merge`) untuk PR
+  sendiri. **PR kontributor: `--squash`** dengan subjek conventional commit yang rapi
+  (subjek commit masuk ke body GitHub Release). Kalau PR menulis "Closes #N" untuk
+  issue payung (#68, #81, #128, #129), buka lagi issue itu setelah merge.
 
 ## Status (main, 2026-11-24 — belum dirilis; rilis berikutnya v0.17.0)
 - Rilis terbaru: **v0.16.3**. Distribusi: npm `@xinzzu/memoria`, MCP Registry
