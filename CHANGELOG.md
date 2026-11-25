@@ -4,6 +4,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 ### Added
+- Vietnamese agent-chatter phrases (`noise-lang/vi.json`), so chatter from AI tools used in Vietnamese is no longer stored as memories (#136, thanks @daocuong11).
 - `memoria --version` (also `-v` and `version`) prints the installed version (#133, thanks @daocuong11).
 ### Docs
 - Code comments in `src/engine/git.ts` translated to English (#134, thanks @daocuong11).
