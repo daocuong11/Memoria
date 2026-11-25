@@ -37,16 +37,16 @@ export function isGitRepo(repoPath: string): Promise<boolean> {
 
 export interface GitStatus {
   branch: string | null;
-  /** File yang berubah/belum ter-commit — sinyal paling akurat "pekerjaan terakhir". */
+  /** Files changed or not yet committed — the most accurate signal of "latest work". */
   dirty: string[];
   ahead: number;
   behind: number;
 }
 
 /**
- * Branch aktif + working tree yang kotor, via `git status --porcelain=v1 -b`.
- * Dipakai blok "LANJUTAN SESI" untuk menjawab: sedang di mana dan sedang
- * menyentuh apa saat user berpindah tool.
+ * Active branch + dirty working tree, via `git status --porcelain=v1 -b`.
+ * Used by the "LANJUTAN SESI" block to answer: where was I, and what was I
+ * touching when the user switched tools.
  */
 export function runGitStatus(repoPath: string, maxFiles = 8): Promise<GitStatus> {
   return new Promise((resolve) => {
@@ -63,7 +63,7 @@ export function runGitStatus(repoPath: string, maxFiles = 8): Promise<GitStatus>
         const dirty: string[] = [];
         for (const l of lines) {
           if (l.startsWith("##")) {
-            // Contoh: "## feat/auth...origin/feat/auth [ahead 1, behind 2]"
+            // Example: "## feat/auth...origin/feat/auth [ahead 1, behind 2]"
             const m = l.match(/^##\s+([^\s.]+)/);
             if (m) branch = m[1];
             const a = l.match(/ahead (\d+)/);
