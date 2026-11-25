@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { getConfig } from "./config";
 import { scanAll, stats, ensureDb } from "./ingest/manager";
 import { startWatcher, stopWatcher } from "./ingest/watcher";
@@ -35,11 +37,26 @@ Usage: memoria <command>
   maintain <reembed|consolidate|all>
   sync <setup|status|export|import|folder|conflicts>
   backup                 Back up the database
+  --version, -v, version  Print the version and exit
 
 Data dir: ~/.memoria (override with MEMORIA_DATA_DIR)`;
 
+/** Version from the root package.json — shown by `memoria --version`. */
+function appVersion(): string {
+  try {
+    return String(JSON.parse(readFileSync(join(__dirname, "../../package.json"), "utf8")).version || "");
+  } catch {
+    return "";
+  }
+}
+
 async function main(): Promise<void> {
   const cmd = process.argv[2] ?? "status";
+
+  if (cmd === "--version" || cmd === "-v" || cmd === "version") {
+    console.log(appVersion());
+    return;
+  }
 
   switch (cmd) {
     case "scan": {
@@ -366,3 +383,4 @@ main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
+
