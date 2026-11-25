@@ -3,6 +3,11 @@ All notable changes to Memoria are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
+### Added
+- `memoria --version` (also `-v` and `version`) prints the installed version (#133, thanks @daocuong11).
+### Docs
+- Code comments in `src/engine/git.ts` translated to English (#134, thanks @daocuong11).
+- The landing page has a release history at `/changelog/`, generated from this file (#126).
 
 ## [0.17.0] — 2026-11-24 — Quality
 A quality release: no new integrations, measured changes only. Every item below came with
