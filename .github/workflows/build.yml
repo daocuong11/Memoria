@@ -185,7 +185,7 @@ jobs:
             if [ -z "${prev}" ]; then
               git log --pretty=format:"- %s (%h)" --no-merges "${GITHUB_REF_NAME}" --max-count=100
             else
-              git log --pretty=format:"- %s (%h)" --no-merges "${prev}..${GITHUB_REF_NAME}"
+              git log --pretty=format:"- %s (%h)" --no-merges "${prev}..${GITHUB_REF_NAME}" | sed -E 's/^- \[[^]]+\] /- /'
             fi
             echo
           } > release-body.md

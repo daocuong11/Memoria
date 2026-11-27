@@ -3,11 +3,14 @@ All notable changes to Memoria are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
+## [0.17.1] — 2026-11-25 — Contributors
+A small release with the first contributions after v0.17.0, all from @daocuong11, plus a release history on the website.
 ### Added
+- French agent-chatter phrases (`noise-lang/fr.json`) (#141, thanks @daocuong11).
 - Vietnamese agent-chatter phrases (`noise-lang/vi.json`), so chatter from AI tools used in Vietnamese is no longer stored as memories (#136, thanks @daocuong11).
 - `memoria --version` (also `-v` and `version`) prints the installed version (#133, thanks @daocuong11).
 ### Docs
-- Code comments in `src/engine/git.ts` translated to English (#134, thanks @daocuong11).
+- Code comments in `src/engine/git.ts` and `src/engine/ingest/watcher.ts` translated to English (#134, #140, thanks @daocuong11).
 - The landing page has a release history at `/changelog/`, generated from this file (#126).
 
 ## [0.17.0] — 2026-11-24 — Quality
