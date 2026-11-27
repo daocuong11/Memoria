@@ -33,7 +33,7 @@ test("every language file is valid and registered", () => {
         const n = lang.normalizePhrase(p);
         assert.ok(n.length >= 2, `${f}/${r.id}: phrase "${p}" is too short`);
         assert.ok(n.split(" ").length <= 6, `${f}/${r.id}: phrase "${p}" is longer than 6 words`);
-        assert.ok(!/[\^$*+?()[\]{}|]/.test(p), `${f}/${r.id}: "${p}" looks like a regex; use plain words`);
+        assert.ok(!/[\\^$*+?()[\]{}|]/.test(p), `${f}/${r.id}: "${p}" looks like a regex; use plain words`);
         assert.ok(!seen.has(n), `${f}/${r.id}: duplicate phrase "${p}"`);
         seen.add(n);
       }
