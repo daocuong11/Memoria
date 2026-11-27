@@ -410,6 +410,16 @@
       "kind": "decision",
       "label": "memory",
       "content": "12 - **AI layer**: OpenRouter API untuk respons chat, pakai model gratis untuk tahap MVP."
+    },
+    {
+      "kind": "fact",
+      "label": "noise",
+      "content": "Laissez-moi vérifier le fichier de configuration avant de continuer."
+    },
+    {
+      "kind": "decision",
+      "label": "memory",
+      "content": "On a décidé d'utiliser PostgreSQL plutôt que MySQL pour les données de session."
     }
   ]
 }
