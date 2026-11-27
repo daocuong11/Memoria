@@ -1,5 +1,5 @@
 /* Language noise files: shape checks for every file (so a contributed
- * language cannot break triage, registration, and matching behaviour. */
+ * language cannot break triage), registration, and matching behaviour. */
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
