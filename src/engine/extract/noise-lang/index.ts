@@ -11,6 +11,7 @@ import en from "./en.json";
 import id from "./id.json";
 import vi from "./vi.json";
 import fr from "./fr.json";
+import de from "./de.json";
 
 export type PhraseAt = "start" | "anywhere";
 export interface LanguageRule {
@@ -26,7 +27,7 @@ export interface LanguageFile {
   rules: LanguageRule[];
 }
 
-export const LANGUAGE_FILES: LanguageFile[] = [en as LanguageFile, id as LanguageFile, vi as LanguageFile, fr as LanguageFile];
+export const LANGUAGE_FILES: LanguageFile[] = [en as LanguageFile, id as LanguageFile, vi as LanguageFile, fr as LanguageFile, de as LanguageFile];
 
 /** Lowercase, drop apostrophes and commas, single spaces. Applied to both the
  * phrases and the candidate, so "Let's", "lets" and "let’s" are the same, and
