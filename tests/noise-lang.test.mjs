@@ -60,6 +60,16 @@ test("matching: whole words, apostrophes and commas ignored, all languages", () 
     "Bạn có muốn tôi thêm test cho parser không?": "offer-question",
     "Đã sửa xong, hy vọng giúp ích cho bạn.": "generic-agent",
     "Giúp tôi thêm nút chia sẻ vào trang kết quả.": "user-request",
+    "Laissez-moi vérifier le fichier de configuration d'abord.": "agent-narration",
+    "Je vais d'abord vérifier le handler de connexion.": "agent-narration",
+    "Je suis en train de lire le code source.": "agent-narration",
+    "Voulez-vous que je continue avec les tests ?": "offer-question",
+    "Faut-il que je relance la compilation ?": "offer-question",
+    "Si vous avez besoin d'aide, n'hésitez pas à me dire.": "generic-agent",
+    "J'espère que cela vous aidera pour la mise en production.": "generic-agent",
+    "Pouvez-vous ajouter un bouton de partage sur la page ?": "user-request",
+    "Aidez-moi à corriger ce test qui échoue.": "user-request",
+    "S'il vous plaît, créez un fichier README pour ce dossier.": "user-request",
   };
   for (const [text, id] of Object.entries(cases)) assert.equal(noiseReason(text), id, text);
   const keep = [
@@ -71,6 +81,10 @@ test("matching: whole words, apostrophes and commas ignored, all languages", () 
     "12 - AI layer pakai OpenRouter untuk respons chat di tahap MVP.",
     "Để đo hiệu năng, chạy benchmark trước khi merge.",
     "Tôi sẽ họp với team lúc 10 giờ sáng mai.",
+    "Je vais en réunion avec l'équipe à 10 heures.",
+    "Ajoutez une colonne à la table des utilisateurs avant la démo.",
+    "Je teste le nouveau framework cette semaine.",
+    "La vérification des logs prend du temps avant chaque déploiement.",
   ];
   for (const text of keep) assert.equal(noiseReason(text), null, text);
 });
