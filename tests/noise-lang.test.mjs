@@ -79,7 +79,17 @@ test("matching: whole words, apostrophes and commas ignored, all languages", () 
     "Ich hoffe, das hilft dir beim Release.": "generic-agent",
     "Sag mir gerne Bescheid, wenn du noch Fragen hast.": "generic-agent",
     "Kannst du einen Share-Button auf der Ergebnisseite hinzufügen?": "user-request",
-    "Hilf mir, diesen fehlschlagenden Test zu korrigieren.": "user-request"
+    "Hilf mir, diesen fehlschlagenden Test zu korrigieren.": "user-request",
+    "Deixa-me verificar o ficheiro de configuração primeiro.": "agent-narration",
+    "Vou verificar primeiro se o handler de login funciona.": "agent-narration",
+    "Estou a ler o código-fonte.": "agent-narration",
+    "Estou a começar a verificar os testes.": "agent-narration",
+    "Queres que continue com os testes?": "offer-question",
+    "Devo continuar com os testes?": "offer-question",
+    "Espero que isto te sirva para o lançamento.": "generic-agent",
+    "Se precisares de ajuda, não hesites em dizer-me.": "generic-agent",
+    "Podes adicionar um botão de partilha na página?": "user-request",
+    "Ajuda-me a corrigir este teste que falha.": "user-request"
   };
   for (const [text, id] of Object.entries(cases)) assert.equal(noiseReason(text), id, text);
   const keep = [
@@ -98,7 +108,11 @@ test("matching: whole words, apostrophes and commas ignored, all languages", () 
     "Ich teste das neue Framework diese Woche.",
     "Füge eine Spalte zur Benutzertabelle hinzu, vor der Demo.",
     "Ich habe morgen um 10 Uhr ein Meeting mit dem Team.",
-    "Die Überprüfung der Logs dauert vor jedem Deployment lange."
+    "Die Überprüfung der Logs dauert vor jedem Deployment lange.",
+    "Vou reunir com a equipa às 10 horas.",
+    "Adiciona uma coluna à tabela de utilizadores antes da demonstração.",
+    "Estou a testar o novo framework esta semana.",
+    "A verificação dos registos demora antes de cada implementação."
   ];
   for (const text of keep) assert.equal(noiseReason(text), null, text);
 });
