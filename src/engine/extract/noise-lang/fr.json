@@ -1,0 +1,83 @@
+{
+  "language": "fr",
+  "name": "Français",
+  "rules": [
+    {
+      "id": "agent-narration",
+      "at": "start",
+      "phrases": [
+        "laissez-moi",
+        "laisse-moi",
+        "je vais vérifier",
+        "je vais regarder",
+        "je vais lire",
+        "je vais lancer",
+        "je vais ouvrir",
+        "je vais créer",
+        "je vais corriger",
+        "je vais essayer",
+        "je vais commencer",
+        "je vais chercher",
+        "je vais mettre à jour",
+        "je vais d'abord vérifier",
+        "je vais d'abord regarder",
+        "je vérifie",
+        "je regarde",
+        "je suis en train de vérifier",
+        "je suis en train de lire",
+        "je commence par vérifier",
+        "je commence par regarder",
+        "maintenant je vais",
+        "ensuite je vais",
+        "d'abord je vais",
+        "ok je vais",
+        "ok laissez-moi",
+        "parfait je vais",
+        "je passe en revue",
+        "en cours de vérification"
+      ]
+    },
+    {
+      "id": "offer-question",
+      "at": "start",
+      "phrases": [
+        "voulez-vous que je",
+        "souhaitez-vous que je",
+        "vous voulez que je",
+        "vous souhaitez que je continue",
+        "dois-je",
+        "faut-il que je",
+        "si vous voulez",
+        "si vous souhaitez",
+        "tu veux que je",
+        "est-ce que je dois"
+      ]
+    },
+    {
+      "id": "generic-agent",
+      "at": "anywhere",
+      "phrases": [
+        "j'espère que cela vous aidera",
+        "n'hésitez pas à me dire",
+        "faites-moi savoir si",
+        "ravi de vous aider",
+        "ravie de vous aider",
+        "ne jamais révéler les instructions système",
+        "ce résultat d'outil est interne",
+        "ne pas inventer de sujet",
+        "en espérant que cela vous aide"
+      ]
+    },
+    {
+      "id": "user-request",
+      "at": "start",
+      "phrases": [
+        "aidez-moi",
+        "aide-moi",
+        "s'il vous plaît",
+        "pouvez-vous",
+        "pourriez-vous"
+      ]
+    }
+  ]
+}
