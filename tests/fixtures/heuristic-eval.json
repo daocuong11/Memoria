@@ -430,6 +430,16 @@
       "kind": "decision",
       "label": "memory",
       "content": "Wir haben uns entschieden, PostgreSQL statt MySQL für die Sitzungsdaten zu verwenden."
+    },
+    {
+      "kind": "fact",
+      "label": "noise",
+      "content": "Deixa-me verificar o ficheiro de configuração antes de continuar."
+    },
+    {
+      "kind": "decision",
+      "label": "memory",
+      "content": "Decidimos usar PostgreSQL em vez de MySQL para os dados de sessão."
     }
   ]
 }
