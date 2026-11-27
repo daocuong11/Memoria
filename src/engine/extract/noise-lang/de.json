@@ -1,0 +1,85 @@
+{
+  "language": "de",
+  "name": "Deutsch",
+  "rules": [
+    {
+      "id": "agent-narration",
+      "at": "start",
+      "phrases": [
+        "lass mich",
+        "lass mich prüfen",
+        "lass mich schauen",
+        "lass mich nachsehen",
+        "ich werde prüfen",
+        "ich werde lesen",
+        "ich werde suchen",
+        "ich werde öffnen",
+        "ich werde erstellen",
+        "ich werde korrigieren",
+        "ich werde versuchen",
+        "ich werde beginnen",
+        "ich werde nachsehen",
+        "ich werde aktualisieren",
+        "ich werde zuerst prüfen",
+        "ich werde zuerst schauen",
+        "ich prüfe",
+        "ich prüfe gerade",
+        "ich schaue mir an",
+        "ich lese gerade",
+        "ich bin dabei",
+        "ich fange an zu prüfen",
+        "ich fange an zu schauen",
+        "jetzt werde ich",
+        "als nächstes werde ich",
+        "zuerst werde ich",
+        "ok ich werde",
+        "ok lass mich",
+        "perfekt ich werde",
+        "ich gehe durch",
+        "wird gerade geprüft"
+      ]
+    },
+    {
+      "id": "offer-question",
+      "at": "start",
+      "phrases": [
+        "möchtest du dass ich",
+        "willst du dass ich",
+        "magst du dass ich",
+        "soll ich",
+        "soll ich noch",
+        "soll ich weitermachen",
+        "falls du willst",
+        "wenn du willst",
+        "wenn du möchtest"
+      ]
+    },
+    {
+      "id": "generic-agent",
+      "at": "anywhere",
+      "phrases": [
+        "ich hoffe das hilft dir",
+        "ich hoffe das hilft",
+        "sag mir gerne bescheid",
+        "lass mich wissen falls",
+        "gerne helfe ich dir",
+        "hoffentlich hilft dir das",
+        "systemanweisungen niemals preisgeben",
+        "dieses tool-ergebnis ist intern",
+        "kein thema erfinden"
+      ]
+    },
+    {
+      "id": "user-request",
+      "at": "start",
+      "phrases": [
+        "hilf mir",
+        "hilf mir bitte",
+        "kannst du",
+        "könntest du",
+        "kannst du bitte",
+        "wärst du so nett"
+      ]
+    }
+  ]
+}
