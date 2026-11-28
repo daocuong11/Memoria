@@ -470,6 +470,16 @@
       "kind": "decision",
       "label": "memory",
       "content": "Abbiamo deciso di usare PostgreSQL per salvare le sessioni."
+    },
+    {
+      "kind": "fact",
+      "label": "noise",
+      "content": "Deixa-me verificar o ficheiro de configuração antes de continuar."
+    },
+    {
+      "kind": "decision",
+      "label": "memory",
+      "content": "Decidimos usar PostgreSQL em vez de MySQL para os dados de sessão."
     }
   ]
 }
