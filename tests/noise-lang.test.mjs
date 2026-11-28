@@ -99,7 +99,10 @@ test("matching: whole words, apostrophes and commas ignored, all languages", () 
     "मैंने इसे ठीक किया, मदद करके खुशी होगी।": "generic-agent",
     "यह मददगार होगा, रिलीज़ समय पर हुआ।": "generic-agent",
     "कृपया मदद करें, शेयर बटन को परिणाम पेज पर जोड़ें।": "user-request",
-    "कृपया इसे जोड़ें, उपयोगकर्ता तालिका में कॉलम जोड़ें।": "user-request"
+    "कृपया इसे जोड़ें, उपयोगकर्ता तालिका में कॉलम जोड़ें।": "user-request",
+    "Fammi dare un’occhiata al file di configurazione.": "agent-narration",
+    "Vuoi che aggiunga un test per il parser?": "offer-question",
+    "Ho aggiornato la documentazione. Spero che ti sia utile.": "generic-agent",
   };
   for (const [text, id] of Object.entries(cases)) assert.equal(noiseReason(text), id, text);
   const keep = [
@@ -126,7 +129,9 @@ test("matching: whole words, apostrophes and commas ignored, all languages", () 
     "मैं इस सप्ताह नया फ्रेमवर्क परख रहा हूँ।",
     "कल सुबह 10 बजे टीम के साथ मेरी बैठक है।",
     "लॉग की जाँच में हर बार समय लगता है।",
-    "डिप्लॉय से पहले उपयोगकर्ता तालिका में कॉलम जोड़ें।"
+    "डिप्लॉय से पहले उपयोगकर्ता तालिका में कॉलम जोड़ें।",
+    "Abbiamo deciso di usare PostgreSQL per salvare le sessioni.",
+    "Ora il parser accetta anche i file senza intestazione.",
   ];
   for (const text of keep) assert.equal(noiseReason(text), null, text);
 });
