@@ -357,7 +357,7 @@ export async function generateHandoff(slug: string, opts: HandoffOptions = {}): 
     if (await isGitRepo(proj.path)) {
       const gitLog = await runGitLog(proj.path, 15);
       if (gitLog.length) {
-        lines.push("", "## Aktivitas Git Terbaru");
+        lines.push("", "## Recent git activity");
         for (const g of gitLog) lines.push(`- ${g.date} ${g.message}`);
       }
     }
