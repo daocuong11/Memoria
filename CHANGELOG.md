@@ -3,6 +3,8 @@ All notable changes to Memoria are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
+### Fixed
+- The handoff block's git section was titled in Indonesian ("Aktivitas Git Terbaru"); it now reads "Recent git activity" like the rest of the block.
 ### Changed
 - Language noise files in `noise-lang/` are loaded automatically: a new language is one JSON file, with no registration line, so language PRs no longer conflict with each other. A malformed file is skipped with a warning instead of breaking triage.
 ### Added
