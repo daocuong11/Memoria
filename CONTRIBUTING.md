@@ -55,7 +55,12 @@ regular expressions, so you do not need to know the code to add a language.
    - `agent-narration` (`"at": "start"`): the agent describing its next step.
    - `offer-question` (`"at": "start"`): the agent offering to do more.
    - `generic-agent` (`"at": "anywhere"`): closing pleasantries.
-3. Add one import line for your file in `noise-lang/index.ts`.
+   - `user-request` (`"at": "start"`): the user asking the agent to do something.
+
+   Phrases are matched on whole words separated by spaces, so languages
+   written without spaces (Japanese, Chinese, Thai) are not supported yet.
+3. That's it for registration: every `*.json` in `noise-lang/` is loaded
+   automatically, so you don't touch `index.ts`.
 4. Run `npm test` (`tests/noise-lang.test.mjs` checks every file) and
    `npm run eval:heuristic`.
 

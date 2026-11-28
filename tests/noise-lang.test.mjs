@@ -20,7 +20,7 @@ test("every language file is valid and registered", () => {
     const d = JSON.parse(fs.readFileSync(path.join(SRC, f), "utf8"));
     const code = f.replace(/\.json$/, "");
     assert.equal(d.language, code, `${f}: "language" must equal the file name`);
-    assert.ok(registered.has(code), `${f} is not imported in noise-lang/index.ts`);
+    assert.ok(registered.has(code), `${f} was not loaded (is it valid JSON with the right shape?)`);
     assert.ok(typeof d.name === "string" && d.name.length > 1, `${f}: "name" is required`);
     assert.ok(Array.isArray(d.rules) && d.rules.length, `${f}: "rules" must be a non-empty list`);
     for (const r of d.rules) {
