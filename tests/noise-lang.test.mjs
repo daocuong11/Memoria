@@ -90,7 +90,6 @@ test("matching: whole words, apostrophes and commas ignored, all languages", () 
     "यह मददगार होगा, रिलीज़ समय पर हुआ।": "generic-agent",
     "कृपया मदद करें, शेयर बटन को परिणाम पेज पर जोड़ें।": "user-request",
     "कृपया इसे जोड़ें, उपयोगकर्ता तालिका में कॉलम जोड़ें।": "user-request"
-
   };
   for (const [text, id] of Object.entries(cases)) assert.equal(noiseReason(text), id, text);
   const keep = [
