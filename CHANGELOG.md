@@ -8,7 +8,7 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 - Italian agent-chatter phrases (`noise-lang/it.json`) (#147, thanks @durgaprasad-mr).
 - German agent-chatter phrases (`noise-lang/de.json`) (#142, thanks @daocuong11).
-- Spanish and Hindi agent-chatter phrases (`noise-lang/es.json`, `hi.json`) (#143, #148, thanks @daocuong11).
+- Spanish, Hindi and Portuguese agent-chatter phrases (`noise-lang/es.json`, `hi.json`, `pt.json`) (#143, #148, #145, thanks @daocuong11).
 ## [0.17.1] — 2026-11-25 — Contributors
 A small release with the first contributions after v0.17.0, all from @daocuong11, plus a release history on the website.
 ### Added
