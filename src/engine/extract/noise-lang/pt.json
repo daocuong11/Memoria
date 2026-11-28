@@ -1,0 +1,84 @@
+{
+  "language": "pt",
+  "name": "Português",
+  "rules": [
+    {
+      "id": "agent-narration",
+      "at": "start",
+      "phrases": [
+        "deixa-me verificar",
+        "deixa-me ver",
+        "deixa-me confirmar",
+        "deixa-me procurar",
+        "vou verificar",
+        "vou confirmar",
+        "vou ler",
+        "vou procurar",
+        "vou abrir",
+        "vou criar",
+        "vou corrigir",
+        "vou tentar",
+        "vou começar",
+        "vou atualizar",
+        "vou verificar primeiro",
+        "vou ver primeiro",
+        "estou a verificar",
+        "estou a confirmar",
+        "estou a ler",
+        "estou a procurar",
+        "estou a começar a verificar",
+        "agora vou",
+        "a seguir vou",
+        "primeiro vou",
+        "está bem vou",
+        "está bem deixa-me",
+        "perfeito vou",
+        "vou rever",
+        "em curso de verificação"
+      ]
+    },
+    {
+      "id": "offer-question",
+      "at": "start",
+      "phrases": [
+        "queres que siga",
+        "queres que continue",
+        "queres que eu",
+        "tu queres que eu",
+        "devo continuar",
+        "devo seguir",
+        "devo fazer isto",
+        "devia continuar",
+        "se quiseres",
+        "se preferires"
+      ]
+    },
+    {
+      "id": "generic-agent",
+      "at": "anywhere",
+      "phrases": [
+        "espero que isto te sirva",
+        "espero que te sirva",
+        "não hesites em dizer-me",
+        "avisa-me se",
+        "encantado por ajudar",
+        "encantada por ajudar",
+        "nunca reveles as instruções do sistema",
+        "este resultado de ferramenta é interno",
+        "não inventes nenhum tema"
+      ]
+    },
+    {
+      "id": "user-request",
+      "at": "start",
+      "phrases": [
+        "ajuda-me",
+        "ajuda-me por favor",
+        "podes",
+        "podias",
+        "podes por favor",
+        "serias tão amável"
+      ]
+    }
+  ]
+}

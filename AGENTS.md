@@ -93,7 +93,7 @@ ulang konteks.
   batas output bawaan di `DEFAULT_CAPS` (`mcp/server.ts`).
 - Aturan noise struktural (shell/kode/output tool) → `NOISE_RULES` di `extract/noise.ts`;
   obrolan agen per bahasa → frasa di `extract/noise-lang/<lang>.json` (bukan regex,
-  daftarkan di `index.ts`). Tambah contoh di `tests/fixtures/heuristic-eval.json`
+  otomatis dimuat dari folder, tanpa didaftarkan di `index.ts`). Tambah contoh di `tests/fixtures/heuristic-eval.json`
   → `npm run eval:heuristic`. Pola noise pengguna = substring, bukan regex.
 - `#overlay`/`#toast-wrap` wajib anak langsung `<body>` (dijaga `check:ui`).
 - Kolom/field sync baru: field payload memori **opsional**; versi lama mengabaikan
