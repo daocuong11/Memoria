@@ -4,17 +4,13 @@
  * one. Each file lists plain phrases, never regular expressions, so a new
  * language is a safe pull request for anyone who speaks it.
  *
- * Adding a language: copy en.json to <code>.json, translate the phrases,
- * and add one import line below. `tests/noise-lang.test.mjs` checks every file.
+ * Adding a language: copy en.json to <code>.json and translate the phrases.
+ * Every *.json in this folder is loaded at startup (tsconfig copies them to
+ * dist/), so no registration line is needed and language PRs never conflict.
+ * `tests/noise-lang.test.mjs` checks every file.
  * ------------------------------------------------------------------------- */
-import en from "./en.json";
-import id from "./id.json";
-import vi from "./vi.json";
-import fr from "./fr.json";
-import es from "./es.json";
-import de from "./de.json";
-import hi from "./hi.json";
-import it from "./it.json";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 export type PhraseAt = "start" | "anywhere";
 export interface LanguageRule {
@@ -30,7 +26,35 @@ export interface LanguageFile {
   rules: LanguageRule[];
 }
 
-export const LANGUAGE_FILES: LanguageFile[] = [en as LanguageFile, id as LanguageFile, vi as LanguageFile, fr as LanguageFile, es as LanguageFile, de as LanguageFile, hi as LanguageFile, it as LanguageFile];
+function isLanguageFile(d: unknown): d is LanguageFile {
+  const f = d as LanguageFile;
+  return !!f && typeof f.language === "string" && typeof f.name === "string" && Array.isArray(f.rules) &&
+    f.rules.every((r) => r && typeof r.id === "string" && (r.at === "start" || r.at === "anywhere") && Array.isArray(r.phrases));
+}
+
+/** Every language file next to this module, English first, then by code. A
+ * malformed file is skipped (and reported) instead of breaking triage. */
+function loadLanguageFiles(dir: string): LanguageFile[] {
+  let names: string[] = [];
+  try {
+    names = fs.readdirSync(dir).filter((f) => f.endsWith(".json"));
+  } catch {
+    return [];
+  }
+  const out: LanguageFile[] = [];
+  for (const name of names.sort((a, b) => (a === "en.json" ? -1 : b === "en.json" ? 1 : a.localeCompare(b)))) {
+    try {
+      const d: unknown = JSON.parse(fs.readFileSync(path.join(dir, name), "utf8"));
+      if (isLanguageFile(d)) out.push(d);
+      else console.warn(`[memoria] noise-lang/${name}: invalid shape, skipped`);
+    } catch {
+      console.warn(`[memoria] noise-lang/${name}: unreadable JSON, skipped`);
+    }
+  }
+  return out;
+}
+
+export const LANGUAGE_FILES: LanguageFile[] = loadLanguageFiles(__dirname);
 
 /** Lowercase, drop apostrophes and commas, single spaces. Applied to both the
  * phrases and the candidate, so "Let's", "lets" and "let’s" are the same, and
