@@ -20,7 +20,7 @@ test("every language file is valid and registered", () => {
     const d = JSON.parse(fs.readFileSync(path.join(SRC, f), "utf8"));
     const code = f.replace(/\.json$/, "");
     assert.equal(d.language, code, `${f}: "language" must equal the file name`);
-    assert.ok(registered.has(code), `${f} is not imported in noise-lang/index.ts`);
+    assert.ok(registered.has(code), `${f} was not loaded (is it valid JSON with the right shape?)`);
     assert.ok(typeof d.name === "string" && d.name.length > 1, `${f}: "name" is required`);
     assert.ok(Array.isArray(d.rules) && d.rules.length, `${f}: "rules" must be a non-empty list`);
     for (const r of d.rules) {
@@ -70,6 +70,16 @@ test("matching: whole words, apostrophes and commas ignored, all languages", () 
     "Pouvez-vous ajouter un bouton de partage sur la page ?": "user-request",
     "Aidez-moi à corriger ce test qui échoue.": "user-request",
     "S'il vous plaît, créez un fichier README pour ce dossier.": "user-request",
+    "Déjame revisar el archivo de configuración.": "agent-narration",
+    "Voy a comprobar primero si el handler de login funciona.": "agent-narration",
+    "Estoy leyendo el código fuente.": "agent-narration",
+    "Estoy empezando a comprobar los tests.": "agent-narration",
+    "Quieres que siga con las pruebas?": "offer-question",
+    "Debo seguir con la compilación?": "offer-question",
+    "Espero que esto te sirva para el lanzamiento.": "generic-agent",
+    "Avísame si necesitas algo más.": "generic-agent",
+    "Puedes añadir un botón de compartir en la página de resultados?": "user-request",
+    "Ayúdame a corregir este test que falla.": "user-request",
     "Lass mich die Konfigurationsdatei prüfen.": "agent-narration",
     "Ich werde zuerst prüfen, ob der Login-Handler funktioniert.": "agent-narration",
     "Ich lese gerade den Quellcode.": "agent-narration",
@@ -79,40 +89,59 @@ test("matching: whole words, apostrophes and commas ignored, all languages", () 
     "Ich hoffe, das hilft dir beim Release.": "generic-agent",
     "Sag mir gerne Bescheid, wenn du noch Fragen hast.": "generic-agent",
     "Kannst du einen Share-Button auf der Ergebnisseite hinzufügen?": "user-request",
-  "Hilf mir, diesen fehlschlagenden Test zu korrigieren.": "user-request",    
-  "確認します、設定ファイルの内容をまず見ます。": "agent-narration",
-  "調べてみます、ログイン処理の不具合を。": "agent-narration",
-  "作成します、新しいテストファイルを追加します。": "agent-narration",
-  "まず確認します、認証ハンドラが動くかどうかを。": "agent-narration",
-  "確認しましょうか、テストを続けますか。": "offer-question",
-  "進めてもいいですか、ファイルを作成しますか。": "offer-question",
-  "修正しました、お役に立てば嬉しいです。": "generic-agent",
-  "参考になれば嬉しいです、リリースに間に合いました。": "generic-agent",
-  "手伝ってください、共有ボタンを結果ページに追加してください。": "user-request",
-  "追加してください、ユーザーテーブルに列を追加してください。": "user-request"
-};
-for (const [text, id] of Object.entries(cases)) assert.equal(noiseReason(text), id, text);
-const keep = [
-  "Readings from the sensor are stored in Postgres daily.",
-  "Let measure performance with a benchmark before merge.",
-  "Use pnpm workspaces because they are faster here.",
-  "Checkout uses Stripe; refunds go through the admin panel.",
-  "Lanjutan dari keputusan kemarin: indexer pakai Postgres, bukan polling.",
-  "12 - AI layer pakai OpenRouter untuk respons chat di tahap MVP.",
-  "Để đo hiệu năng, chạy benchmark trước khi merge.",
-  "Tôi sẽ họp với team lúc 10 giờ sáng mai.",
-  "Je vais en réunion avec l'équipe à 10 heures.",
-  "Ajoutez une colonne à la table des utilisateurs avant la démo.",
-  "Je teste le nouveau framework cette semaine.",
-  "La vérification des logs prend du temps avant chaque déploiement.",
-  "Ich teste das neue Framework diese Woche.",
-  "Füge eine Spalte zur Benutzertabelle hinzu, vor der Demo.",
-  "Ich habe morgen um 10 Uhr ein Meeting mit dem Team.",
-  "Die Überprüfung der Logs dauert vor jedem Deployment lange.",
-  "新しいフレームワークを今週テストします。",
-  "明日の午前10時にチームと会議があります。",
-  "ログの確認には毎回時間がかかります。",
-  "デプロイの前にユーザーテーブルへ列を追加します。"
-];
-for (const text of keep) assert.equal(noiseReason(text), null, text);
+    "Hilf mir, diesen fehlschlagenden Test zu korrigieren.": "user-request",
+    "मैं जाँच करता हूँ, सेटिंग फ़ाइल की सामग्री पहले देखता हूँ।": "agent-narration",
+    "मैं देखता हूँ, लॉगिन प्रक्रिया की गड़बड़ी को।": "agent-narration",
+    "मैं बनाता हूँ, नई टेस्ट फ़ाइल जोड़ता हूँ।": "agent-narration",
+    "मैं पहले जाँच करता हूँ, प्रमाणीकरण हैंडलर काम करता है या नहीं।": "agent-narration",
+    "क्या मैं जाँच करूँ, टेस्ट जारी रखूँ।": "offer-question",
+    "क्या मैं आगे बढ़ूँ, फ़ाइल बनाऊँ।": "offer-question",
+    "मैंने इसे ठीक किया, मदद करके खुशी होगी।": "generic-agent",
+    "यह मददगार होगा, रिलीज़ समय पर हुआ।": "generic-agent",
+    "कृपया मदद करें, शेयर बटन को परिणाम पेज पर जोड़ें।": "user-request",
+    "कृपया इसे जोड़ें, उपयोगकर्ता तालिका में कॉलम जोड़ें।": "user-request",
+    "Fammi dare un’occhiata al file di configurazione.": "agent-narration",
+    "Vuoi che aggiunga un test per il parser?": "offer-question",
+    "Ho aggiornato la documentazione. Spero che ti sia utile.": "generic-agent",
+    "確認します、設定ファイルの内容をまず見ます。": "agent-narration",
+    "調べてみます、ログイン処理の不具合を。": "agent-narration",
+    "作成します、新しいテストファイルを追加します。": "agent-narration",
+    "まず確認します、認証ハンドラが動くかどうかを。": "agent-narration",
+    "確認しましょうか、テストを続けますか。": "offer-question",
+    "進めてもいいですか、ファイルを作成しますか。": "offer-question",
+    "修正しました、お役に立てば嬉しいです。": "generic-agent",
+    "参考になれば嬉しいです、リリースに間に合いました。": "generic-agent",
+    "手伝ってください、共有ボタンを結果ページに追加してください。": "user-request",
+    "追加してください、ユーザーテーブルに列を追加してください。": "user-request"
+  };
+  for (const [text, id] of Object.entries(cases)) assert.equal(noiseReason(text), id, text);
+  const keep = [
+    "Readings from the sensor are stored in Postgres daily.",
+    "Let measure performance with a benchmark before merge.",
+    "Use pnpm workspaces because they are faster here.",
+    "Checkout uses Stripe; refunds go through the admin panel.",
+    "Lanjutan dari keputusan kemarin: indexer pakai Postgres, bukan polling.",
+    "12 - AI layer pakai OpenRouter untuk respons chat di tahap MVP.",
+    "Để đo hiệu năng, chạy benchmark trước khi merge.",
+    "Tôi sẽ họp với team lúc 10 giờ sáng mai.",
+    "Je vais en réunion avec l'équipe à 10 heures.",
+    "Ajoutez une colonne à la table des utilisateurs avant la démo.",
+    "Je teste le nouveau framework cette semaine.",
+    "La vérification des logs prend du temps avant chaque déploiement.",
+    "Pruebo el nuevo framework esta semana.",
+    "Añade una columna a la tabla de usuarios antes de la demo.",
+    "Tengo mañana a las 10 una reunión con el equipo.",
+    "La revisión de los logs lleva tiempo antes de cada despliegue.",
+    "Ich teste das neue Framework diese Woche.",
+    "Füge eine Spalte zur Benutzertabelle hinzu, vor der Demo.",
+    "Ich habe morgen um 10 Uhr ein Meeting mit dem Team.",
+    "Die Überprüfung der Logs dauert vor jedem Deployment lange.",
+    "मैं इस सप्ताह नया फ्रेमवर्क परख रहा हूँ।",
+    "कल सुबह 10 बजे टीम के साथ मेरी बैठक है।",
+    "लॉग की जाँच में हर बार समय लगता है।",
+    "डिप्लॉय से पहले उपयोगकर्ता तालिका में कॉलम जोड़ें।",
+    "Abbiamo deciso di usare PostgreSQL per salvare le sessioni.",
+    "Ora il parser accetta anche i file senza intestazione.",
+  ];
+  for (const text of keep) assert.equal(noiseReason(text), null, text);
 });
