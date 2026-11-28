@@ -3,8 +3,12 @@ All notable changes to Memoria are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
+### Changed
+- Language noise files in `noise-lang/` are loaded automatically: a new language is one JSON file, with no registration line, so language PRs no longer conflict with each other. A malformed file is skipped with a warning instead of breaking triage.
 ### Added
+- Italian agent-chatter phrases (`noise-lang/it.json`) (#147, thanks @durgaprasad-mr).
 - German agent-chatter phrases (`noise-lang/de.json`) (#142, thanks @daocuong11).
+- Spanish and Hindi agent-chatter phrases (`noise-lang/es.json`, `hi.json`) (#143, #148, thanks @daocuong11).
 ## [0.17.1] — 2026-11-25 — Contributors
 A small release with the first contributions after v0.17.0, all from @daocuong11, plus a release history on the website.
 ### Added
