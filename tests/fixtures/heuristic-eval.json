@@ -420,11 +420,21 @@
       "kind": "decision",
       "label": "memory",
       "content": "On a décidé d'utiliser PostgreSQL plutôt que MySQL pour les données de session."
+    },
+    {
+      "kind": "fact",
+      "label": "noise",
+      "content": "Déjame revisar el archivo de configuración antes de seguir."
 },
     {
       "kind": "fact",
       "label": "noise",
       "content": "Lass mich die Konfigurationsdatei prüfen, bevor wir weitermachen."
+    },
+    {
+      "kind": "decision",
+      "label": "memory",
+      "content": "Decidimos usar PostgreSQL en lugar de MySQL para los datos de sesión."
     },
     {
       "kind": "decision",
